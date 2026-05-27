@@ -22,7 +22,7 @@
   --light:#B8AEA4;--border:#E4DDD4;--shadow:rgba(0,0,0,0.07);
   --font-ui:'DM Sans','Noto Sans SC',system-ui,sans-serif;
   --font-serif:'Lora',Georgia,serif;
-  --sw:260px;--th:52px;
+  --sw:260px;--th:calc(52px + env(safe-area-inset-top, 0px));
 }
 html,body{height:100%;font-family:var(--font-ui);background:var(--bg);color:var(--text);overflow:hidden;-webkit-font-smoothing:antialiased}
 button{cursor:pointer;border:none;background:none;font-family:inherit;color:inherit}
@@ -54,7 +54,7 @@ input,textarea{font-family:inherit;color:inherit}
 #sb-ov{display:none;position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.22)}
 #sb-ov.on{display:block}
 #sidebar{width:var(--sw);height:100%;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;transition:transform .25s cubic-bezier(.4,0,.2,1)}
-@media(max-width:768px){#sidebar{position:fixed;left:0;top:0;height:100%;z-index:100;transform:translateX(-100%)}#sidebar.on{transform:translateX(0)}}
+@media(max-width:768px){#sidebar{position:fixed;left:0;top:0;height:100%;z-index:100;transform:translateX(-100%);padding-top:env(safe-area-inset-top,0px)}#sidebar.on{transform:translateX(0)}}
 .sb-hd{padding:18px 14px 10px;display:flex;align-items:center;justify-content:space-between}
 .sb-name{font-size:19px;font-weight:300;letter-spacing:-.2px}
 .sb-close{width:28px;height:28px;display:none;align-items:center;justify-content:center;border-radius:6px;color:var(--muted);transition:background .12s}
@@ -86,7 +86,7 @@ input,textarea{font-family:inherit;color:inherit}
 #main{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;height:100dvh;overflow:hidden}
 
 /* TOPBAR */
-#topbar{height:var(--th);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:10}
+#topbar{padding-top:env(safe-area-inset-top,0px);height:var(--th);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:0 12px;border-bottom:1px solid var(--border);background:var(--bg);position:relative;z-index:10}
 .tb-l{display:flex;align-items:center;gap:8px}
 .ham{width:34px;height:34px;display:flex;align-items:center;justify-content:center;border-radius:8px;color:var(--muted);transition:background .12s}
 .ham:hover{background:var(--border)}
