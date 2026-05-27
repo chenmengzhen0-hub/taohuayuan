@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#C1876B"/>
+  <!-- 桃花 -->
+  <g transform="translate(256,220)">
+    <ellipse cx="0" cy="-72" rx="28" ry="44" fill="#fff" opacity="0.92" transform="rotate(0)"/>
+    <ellipse cx="0" cy="-72" rx="28" ry="44" fill="#fff" opacity="0.92" transform="rotate(72)"/>
+    <ellipse cx="0" cy="-72" rx="28" ry="44" fill="#fff" opacity="0.92" transform="rotate(144)"/>
+    <ellipse cx="0" cy="-72" rx="28" ry="44" fill="#fff" opacity="0.92" transform="rotate(216)"/>
+    <ellipse cx="0" cy="-72" rx="28" ry="44" fill="#fff" opacity="0.92" transform="rotate(288)"/>
+    <circle cx="0" cy="0" r="22" fill="#F5D5C0"/>
+    <circle cx="0" cy="0" r="10" fill="#C1876B"/>
+  </g>
+  <!-- 底部文字区 -->
+  <text x="256" y="370" text-anchor="middle" font-family="system-ui" font-size="64" font-weight="500" fill="white" opacity="0.9">桃花源</text>
+</svg>
