@@ -1,4 +1,4 @@
-const CACHE = 'taohuyuan-v1';
+const CACHE = 'taohuyuan-v20260528';
 const ASSETS = ['/', '/index.html', '/manifest.json', '/icons/icon-192.png', '/icons/icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,7 +14,6 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  // API请求不缓存
   if (e.request.url.includes('/api/')) return;
   e.respondWith(
     caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
