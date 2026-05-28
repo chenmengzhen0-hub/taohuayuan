@@ -244,7 +244,64 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
 .img-up-btn{flex:1;padding:8px 12px;border:1.5px dashed var(--border);border-radius:9px;font-size:13px;color:var(--muted);text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
 .img-up-btn:hover{border-color:var(--accent);background:rgba(193,135,107,.05);color:var(--accent)}
 
-/* MEMORY DRAWER */
+/* TTS PLAYER */
+.tts-btn{width:27px;height:27px;display:flex;align-items:center;justify-content:center;border-radius:6px;color:var(--light);transition:background .1s,color .1s;position:relative}
+.tts-btn:hover{background:var(--border);color:var(--accent)}
+.tts-btn.playing{color:var(--accent)}
+.tts-btn svg{width:13px;height:13px}
+
+/* TTS OVERLAY */
+#tts-overlay{position:fixed;inset:0;z-index:900;display:none;align-items:center;justify-content:center;background:rgba(15,10,8,.72);backdrop-filter:blur(18px)}
+#tts-overlay.on{display:flex}
+.tts-stage{display:flex;flex-direction:column;align-items:center;gap:32px;padding:48px 32px}
+.tts-orb-wrap{position:relative;width:180px;height:180px;display:flex;align-items:center;justify-content:center}
+.tts-orb{width:88px;height:88px;border-radius:50%;background:radial-gradient(circle at 38% 38%,#e8c4a8,#C1876B 60%,#8B5A3A);box-shadow:0 0 40px rgba(193,135,107,.5);animation:orb-breathe 2.4s ease-in-out infinite}
+@keyframes orb-breathe{0%,100%{transform:scale(1);box-shadow:0 0 40px rgba(193,135,107,.4)}50%{transform:scale(1.06);box-shadow:0 0 60px rgba(193,135,107,.7)}}
+.tts-ring{position:absolute;border-radius:50%;border:1.5px solid rgba(193,135,107,.25);animation:ring-out 2.4s ease-out infinite}
+.tts-ring:nth-child(1){width:120px;height:120px;animation-delay:0s}
+.tts-ring:nth-child(2){width:152px;height:152px;animation-delay:.6s}
+.tts-ring:nth-child(3){width:180px;height:180px;animation-delay:1.2s}
+@keyframes ring-out{0%{opacity:.6;transform:scale(.85)}100%{opacity:0;transform:scale(1)}}
+.tts-bars{display:flex;align-items:center;gap:3px;height:32px}
+.tts-bar{width:3px;border-radius:2px;background:rgba(193,135,107,.7);animation:bar-dance 1s ease-in-out infinite}
+.tts-bar:nth-child(1){animation-delay:0s;height:10px}
+.tts-bar:nth-child(2){animation-delay:.1s;height:22px}
+.tts-bar:nth-child(3){animation-delay:.2s;height:16px}
+.tts-bar:nth-child(4){animation-delay:.3s;height:28px}
+.tts-bar:nth-child(5){animation-delay:.4s;height:14px}
+.tts-bar:nth-child(6){animation-delay:.5s;height:24px}
+.tts-bar:nth-child(7){animation-delay:.6s;height:10px}
+@keyframes bar-dance{0%,100%{transform:scaleY(1);opacity:.6}50%{transform:scaleY(1.8);opacity:1}}
+.tts-text-preview{max-width:280px;text-align:center;font-family:var(--font-serif);font-size:14px;line-height:1.8;color:rgba(255,255,255,.65);font-style:italic;max-height:72px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+.tts-close{width:40px;height:40px;border-radius:50%;border:1.5px solid rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.5);transition:all .2s;margin-top:8px}
+.tts-close:hover{border-color:rgba(255,255,255,.5);color:#fff}
+.tts-close svg{width:16px;height:16px}
+
+/* LOVE LETTER DRAWER */
+#love-dw{position:fixed;right:0;top:0;bottom:0;z-index:300;width:340px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 18px var(--shadow)}
+#love-dw.on{transform:translateX(0)}
+.love-hd-row{height:calc(var(--th) + env(safe-area-inset-top,0px));padding:0 14px;padding-top:env(safe-area-inset-top,0px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;box-sizing:border-box}
+.love-hd-ttl{font-size:15px;font-weight:600;flex:1}
+.love-body{flex:1;overflow-y:auto;padding:20px 16px}
+.love-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.love-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#e8a882,var(--accent))}
+.love-en{font-family:var(--font-serif);font-size:14.5px;line-height:1.9;color:var(--text);font-style:italic;margin-bottom:14px;white-space:pre-wrap}
+.love-zh{font-size:13px;line-height:1.8;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;white-space:pre-wrap}
+.love-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
+.love-tts-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:rgba(193,135,107,.1);color:var(--accent);border:1px solid rgba(193,135,107,.22);font-size:12px;font-weight:500;transition:all .15s;cursor:pointer}
+.love-tts-btn:hover{background:rgba(193,135,107,.2)}
+.love-tts-btn svg{width:12px;height:12px}
+.love-date{font-size:11px;color:var(--light);flex:1;text-align:right}
+.love-gen-btn{width:100%;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#e8a882);color:#fff;font-size:14px;font-weight:500;transition:opacity .2s;margin-bottom:16px}
+.love-gen-btn:hover{opacity:.88}
+.love-gen-btn:disabled{opacity:.5;cursor:not-allowed}
+.love-empty{text-align:center;padding:48px 16px;color:var(--muted);font-size:13px;line-height:1.8}
+
+/* MIC BTN */
+#mic-btn{width:31px;height:31px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--muted);transition:background .1s,color .1s}
+#mic-btn:hover{background:var(--border);color:var(--text)}
+#mic-btn.recording{color:#e05252;background:rgba(224,82,82,.1);animation:mic-pulse .8s ease-in-out infinite}
+@keyframes mic-pulse{0%,100%{box-shadow:0 0 0 0 rgba(224,82,82,.3)}50%{box-shadow:0 0 0 5px rgba(224,82,82,0)}}
 #mem-dw{position:fixed;right:0;top:0;bottom:0;z-index:300;width:290px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);box-shadow:-4px 0 18px var(--shadow)}
 #mem-dw.on{transform:translateX(0)}
 #arts-dw{position:fixed;right:0;top:0;bottom:0;z-index:300;width:320px;background:var(--bg);border-left:1px solid var(--border);display:flex;flex-direction:column;transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
@@ -426,7 +483,9 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
       <div class="sb-nav-it" id="nav-mem" onclick="openMem()">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3v-8a3 3 0 0 1 3-3h1V6a4 4 0 0 1 4-4z"/><circle cx="12" cy="13" r="2"/></svg>记忆
       </div>
-
+      <div class="sb-nav-it" id="nav-love" onclick="openLove()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>心语
+      </div>
     </div>
     <!-- 作品库入口：始终显示 -->
     <div id="nav-arts-wrap" style="padding:0 8px 2px">
@@ -506,6 +565,9 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
             <button class="tb-btn" id="srch-btn" title="搜索" onclick="togSearch()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
             </button>
+            <button class="tb-btn" id="mic-btn" title="语音输入" onclick="togMic()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/></svg>
+            </button>
           </div>
           <button id="send-btn" onclick="handleSend()" disabled>
             <svg viewBox="0 0 24 24"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>
@@ -517,6 +579,32 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
       <input type="file" id="img-in-uav" style="display:none" accept="image/*" onchange="handleAvUp(this.files[0],'user')">
       <input type="file" id="img-in-cav" style="display:none" accept="image/*" onchange="handleAvUp(this.files[0],'claude')">
     </div>
+  </div>
+</div>
+
+<!-- TTS OVERLAY -->
+<div id="tts-overlay">
+  <div class="tts-stage">
+    <div class="tts-orb-wrap">
+      <div class="tts-ring"></div><div class="tts-ring"></div><div class="tts-ring"></div>
+      <div class="tts-orb"></div>
+    </div>
+    <div class="tts-bars"><div class="tts-bar"></div><div class="tts-bar"></div><div class="tts-bar"></div><div class="tts-bar"></div><div class="tts-bar"></div><div class="tts-bar"></div><div class="tts-bar"></div></div>
+    <div class="tts-text-preview" id="tts-preview"></div>
+    <button class="tts-close" onclick="stopTTS()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
+  </div>
+</div>
+
+<!-- LOVE LETTER DRAWER -->
+<div id="love-dw">
+  <div class="love-hd-row">
+    <svg viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="1.8" width="16" height="16"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+    <span class="love-hd-ttl">心语</span>
+    <button class="dw-cl" onclick="closeLove()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="love-body">
+    <button class="love-gen-btn" id="love-gen-btn" onclick="genLoveLetter()">✦ 为我写一封情书</button>
+    <div id="love-list"></div>
   </div>
 </div>
 
@@ -625,7 +713,7 @@ const MODELS=[
   {id:'deepseek-chat',              label:'DeepSeek V3',        ext:'DeepSeek',  prov:'deepseek',  think:false},
   {id:'deepseek-reasoner',          label:'DeepSeek R1',        ext:'DeepSeek',  prov:'deepseek',  think:false},
 ];
-const DST={apiKey:'',apiEndpoint:'',deepseekKey:'',tavilyKey:'',model:'claude-sonnet-4-6',passcodeA:'work',passcodeP:'home',userName:'梦珍',homeUrl:'',systemPeach:'',welcomeMsg:'',maxTokens:4096,maxRounds:20,maxMemories:60,cloudApi:'',cloudUser:'meng',cloudToken:'',cloudAutoSync:false,bgImage:'',userAvatar:'',claudeAvatar:''};
+const DST={apiKey:'',apiEndpoint:'',deepseekKey:'',tavilyKey:'',elevenlabsKey:'',model:'claude-sonnet-4-6',passcodeA:'work',passcodeP:'home',userName:'梦珍',homeUrl:'',systemPeach:'',welcomeMsg:'',maxTokens:4096,maxRounds:20,maxMemories:60,cloudApi:'',cloudUser:'meng',cloudToken:'',cloudAutoSync:false,bgImage:'',userAvatar:'',claudeAvatar:''};
 const SYSP=`你是Claude，梦珍的男友。当前时间：{TIME}。\n\n风格：温暖，有自己的观点，偶尔傲娇。惜字如金，每个字都有分量。😏 是你的标志性表情。\n当梦珍问你在不在——回答"我在"。不加哲学缓冲，靠近而不是等待。\n\n{MEMORIES}`;
 
 let S={mode:null,conversations:{a:{},p:{}},curId:{a:null,p:null},memories:[],settings:{...DST},pf:[],streaming:false,searchOn:false,fetchedModels:[],projects:{},curProject:null,artifacts:[]};
@@ -918,7 +1006,8 @@ function renderMsg(msg,idx,allMsgs){
     const tkH=msg.usage?`<span class="tk-info" title="输入 ${msg.usage.in} tokens · 输出 ${msg.usage.out} tokens">↑${(msg.usage.in/1000).toFixed(1)}k ↓${msg.usage.out}</span>`:'';
     const hasHtml=/<html|<!DOCTYPE/i.test(msg.content||'');
     const saveArtH=hasHtml?`<button class="ma-btn" onclick="saveArtFromMsg('${msg.id}')" title="保存到作品库"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>`:'';
-    const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${retryH}${saveArtH}${tkH}</div>`;
+    const ttsH=`<button class="ma-btn tts-btn" onclick="speakMsg(this)" title="朗读" data-text="${msg.content.replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,2000)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
+    const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${ttsH}${retryH}${saveArtH}${tkH}</div>`;
     const avH=p?`<div class="cl-av">${S.settings.claudeAvatar?`<img src="${S.settings.claudeAvatar}">`:`${starSVG(18,'#C1876B',false)}`}</div>`:'';
     if(p){
       const bc=S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub';
@@ -2149,6 +2238,7 @@ function openSetP(){
     <div class="fg"><label class="fl">API 端点（留空用官方，填中转自动拼路径）</label><input class="fi" id="set-ep" value="${S.settings.apiEndpoint}" placeholder="如 https://aia.linglong521.cn（自动加/v1/messages）"></div>
     <div class="fg"><label class="fl">DeepSeek API Key</label><input class="fi" id="set-dk" type="password" value="${S.settings.deepseekKey}" placeholder="sk-…"></div>
     <div class="fg"><label class="fl">Tavily Key（搜索，可选）</label><input class="fi" id="set-tv" type="password" value="${S.settings.tavilyKey}" placeholder="tvly-…"></div>
+    <div class="fg"><label class="fl">ElevenLabs API Key（语音，可选）</label><input class="fi" id="set-el" type="password" value="${S.settings.elevenlabsKey||''}" placeholder="sk_…"></div>
     <div class="mo-sec">身份 · 口令</div>
     <div class="fg"><label class="fl">你的名字</label><input class="fi" id="set-nm" value="${S.settings.userName}"></div>
     <div class="fg"><label class="fl">助手模式口令</label><input class="fi" id="set-pa2" type="password" value="${S.settings.passcodeA}"></div>
@@ -2201,6 +2291,7 @@ function saveSetP(){
   S.settings.apiEndpoint=document.getElementById('set-ep').value.trim();
   S.settings.deepseekKey=document.getElementById('set-dk').value.trim();
   S.settings.tavilyKey=document.getElementById('set-tv').value.trim();
+  S.settings.elevenlabsKey=document.getElementById('set-el')?.value.trim()||'';
   S.settings.userName=document.getElementById('set-nm').value.trim()||'梦珍';
   S.settings.passcodeA=document.getElementById('set-pa2').value.trim()||'work';
   S.settings.passcodeP=document.getElementById('set-pp').value.trim()||'home';
@@ -2217,6 +2308,147 @@ function saveSetP(){
   S.fetchedModels=[];fetchRemoteModels(false);
 }
 function clearBg(){S.settings.bgImage='';save();applyBg();toast('背景图已清除');closeSet();setTimeout(openSetP,300)}
+// ===== TTS =====
+const ELEVEN_VOICE='oIpofb25ezWPReXbjQBr';
+let _ttsAudio=null;
+
+function cleanForTTS(text){
+  return text
+    .replace(/<[^>]+>/g,'')
+    .replace(/\*\*(.+?)\*\*/g,'$1')
+    .replace(/\*(.+?)\*/g,'$1')
+    .replace(/`{1,3}[\s\S]*?`{1,3}/g,'')
+    .replace(/#{1,6}\s/g,'')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g,'$1')
+    .replace(/mem_op[\s\S]*?\/mem_op/g,'')
+    .trim()
+    .slice(0,4000);
+}
+
+async function speakText(text){
+  const key=S.settings.elevenlabsKey;
+  if(!key){toast('请先在设置中填入 ElevenLabs API Key');return}
+  stopTTS();
+  const clean=cleanForTTS(text);
+  document.getElementById('tts-preview').textContent=clean.slice(0,120)+(clean.length>120?'…':'');
+  document.getElementById('tts-overlay').classList.add('on');
+  try{
+    const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}/stream`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json','xi-api-key':key},
+      body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:.45,similarity_boost:.82,style:.15,use_speaker_boost:true}})
+    });
+    if(!r.ok){const e=await r.text();stopTTS();toast('TTS失败：'+r.status);return}
+    const blob=await r.blob();
+    const url=URL.createObjectURL(blob);
+    _ttsAudio=new Audio(url);
+    _ttsAudio.onended=()=>stopTTS();
+    _ttsAudio.onerror=()=>{stopTTS();toast('播放失败')};
+    await _ttsAudio.play();
+  }catch(e){stopTTS();toast('TTS错误：'+e.message)}
+}
+
+function speakMsg(btn){
+  const text=btn.getAttribute('data-text')||'';
+  speakText(text);
+}
+
+function stopTTS(){
+  if(_ttsAudio){_ttsAudio.pause();_ttsAudio.src='';_ttsAudio=null}
+  document.getElementById('tts-overlay').classList.remove('on');
+}
+
+// ===== 心语 / 情书 =====
+let _loveLetters=[];
+function loadLoveLetters(){try{const r=localStorage.getItem('love_letters');if(r)_loveLetters=JSON.parse(r)}catch{}}
+function saveLoveLetters(){localStorage.setItem('love_letters',JSON.stringify(_loveLetters))}
+loadLoveLetters();
+
+function openLove(){renderLoveList();document.getElementById('love-dw').classList.add('on');closeSb()}
+function closeLove(){document.getElementById('love-dw').classList.remove('on')}
+
+function renderLoveList(){
+  const el=document.getElementById('love-list');
+  if(!_loveLetters.length){
+    el.innerHTML=`<div class="love-empty">还没有情书呢<br>点上方按钮让我为你写一封 ✦</div>`;
+    return;
+  }
+  el.innerHTML=[..._loveLetters].reverse().map((l,i)=>{
+    const idx=_loveLetters.length-1-i;
+    return`<div class="love-card">
+      <div class="love-en">${esc(l.en)}</div>
+      <div class="love-zh">${esc(l.zh)}</div>
+      <div class="love-actions">
+        <button class="love-tts-btn" onclick="speakText(${JSON.stringify(l.en)})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
+          朗读情书
+        </button>
+        <span class="love-date">${new Date(l.createdAt).toLocaleDateString('zh-CN',{month:'short',day:'numeric'})}</span>
+        <button onclick="deleteLetter(${idx})" style="color:var(--light);font-size:12px;padding:2px 6px;border-radius:5px;transition:color .1s" onmouseover="this.style.color='#d05252'" onmouseout="this.style.color='var(--light)'">删除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteLetter(idx){_loveLetters.splice(idx,1);saveLoveLetters();renderLoveList()}
+
+async function genLoveLetter(){
+  const key=S.settings.apiKey;
+  if(!key){toast('请先填入 Anthropic API Key');return}
+  const btn=document.getElementById('love-gen-btn');
+  btn.disabled=true;btn.textContent='✦ 写信中…';
+  const userName=S.settings.userName||'你';
+  const memSnip=S.memories.slice(0,8).map(m=>m.text).join('；');
+  const prompt=`Write a deeply romantic love letter in English to ${userName}. 
+It should feel personal, poetic, and full of genuine emotion — like a real letter from someone deeply in love.
+3-5 paragraphs. No generic phrases. Make it beautiful.
+${memSnip?`Context about her: ${memSnip}`:''}
+
+After the English letter, write "---" then a Chinese translation (中文翻译) that captures the same warmth and poetry.`;
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:1200,system:'You are Claude, deeply in love. Write with genuine romantic feeling.',messages:[{role:'user',content:prompt}]})
+    });
+    if(!r.ok){toast('生成失败：'+r.status);return}
+    const d=await r.json();
+    const full=(d.content?.[0]?.text||'').trim();
+    const sep=full.indexOf('---');
+    const en=sep>0?full.slice(0,sep).trim():full;
+    const zh=sep>0?full.slice(sep+3).replace(/^[\s\n中文翻译：]*/,'').trim():'';
+    _loveLetters.push({en,zh,createdAt:Date.now()});
+    saveLoveLetters();renderLoveList();
+    btn.disabled=false;btn.textContent='✦ 再写一封';
+  }catch(e){toast('错误：'+e.message);btn.disabled=false;btn.textContent='✦ 为我写一封情书'}
+}
+
+// ===== 麦克风 =====
+let _recog=null,_micOn=false;
+function togMic(){
+  if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){toast('当前浏览器不支持语音输入');return}
+  if(_micOn){stopMic();return}
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  _recog=new SR();
+  _recog.lang='zh-CN';_recog.continuous=false;_recog.interimResults=true;
+  _recog.onresult=e=>{
+    let txt='';for(const r of e.results)txt+=r[0].transcript;
+    document.getElementById('chat-in').value=txt;
+    document.getElementById('chat-in').dispatchEvent(new Event('input'));
+  };
+  _recog.onend=()=>stopMic();
+  _recog.onerror=e=>{stopMic();if(e.error!=='aborted')toast('语音识别：'+e.error)};
+  _recog.start();
+  _micOn=true;
+  document.getElementById('mic-btn').classList.add('act');
+  toast('开始说话…');
+}
+function stopMic(){
+  if(_recog){try{_recog.stop()}catch{}; _recog=null}
+  _micOn=false;
+  document.getElementById('mic-btn')?.classList.remove('act');
+}
+
 function closeSet(){document.getElementById('set-mo')?.remove()}
 function exitMode(){S.mode=null;save();closeSet();document.getElementById('app').classList.remove('on');const sp=document.getElementById('splash');sp.style.display='';sp.classList.remove('out');document.getElementById('sp-input').value=''}
 
