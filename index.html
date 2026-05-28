@@ -1036,13 +1036,21 @@ function memWeight(m){
   const fresh=Math.max(0.3,1-months*0.04);
   return a*r*fresh;
 }
+let _memCache={hash:'',result:[]};
 function topMems(n){
-  return [...S.memories].sort((a,b)=>memWeight(b)-memWeight(a)).slice(0,n);
+  const hash=S.memories.length+'|'+n+'|'+(S.memories[0]?.id||'')+'|'+(S.memories[S.memories.length-1]?.id||'');
+  if(_memCache.hash===hash&&_memCache.n===n)return _memCache.result;
+  const r=[...S.memories].sort((a,b)=>memWeight(b)-memWeight(a)).slice(0,n);
+  _memCache={hash,n,result:r};
+  return r;
 }
+function invalidateMemCache(){_memCache={hash:'',result:[]}}
 function buildSys(){
   const now=new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
   const searchHint=S.searchOn?'\n\n[搜索模式已开启] 用户希望你搜索/查询信息。请尽你所知提供详细、准确的回答。如果涉及实时信息你无法确认，请如实说明。':'';
-  const imgHint='\n你可以识别和分析用户发送的图片。';
+  const curModel=S.settings.model||'';
+  const isDS=curModel.toLowerCase().startsWith('deepseek');
+  const imgHint=isDS?'':'\n你可以识别和分析用户发送的图片。';
   // 项目模式：注入项目系统提示、全局记忆和知识文档
   if(S.curProject&&S.projects[S.curProject]){
     const proj=S.projects[S.curProject];
@@ -1419,18 +1427,12 @@ function setCloudStatus(msg,isErr){
 async function cloudMemUpload(showMsg){
   if(!cloudReady()){if(showMsg)toast('请先填写云端API地址');return{ok:false}}
   const c=S.settings;
-  const url=c.cloudApi+'/api/sync?user='+encodeURIComponent(c.cloudUser);
+  const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
   const headers={'Content-Type':'application/json'};
   if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
   try{
     setCloudStatus('上传中…');
-    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({
-        memories:S.memories,
-        projects:S.projects,
-        artifacts:S.artifacts,
-        curProject:S.curProject,
-        settings:S.settings
-      })});
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({memories:S.memories})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
@@ -1446,7 +1448,7 @@ async function cloudMemUpload(showMsg){
 async function cloudMemDownload(showMsg){
   if(!cloudReady()){if(showMsg)toast('请先填写云端API地址');return{ok:false}}
   const c=S.settings;
-  const url=c.cloudApi+'/api/sync?user='+encodeURIComponent(c.cloudUser);
+  const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
   const headers={};
   if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
   try{
@@ -1455,22 +1457,11 @@ async function cloudMemDownload(showMsg){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     if(!d.found){setCloudStatus('云端暂无数据');if(showMsg)toast('云端暂无记忆');return{ok:true,found:false}}
-    if(d.data){
-      if(Array.isArray(d.data.memories))S.memories=d.data.memories;
-      if(d.data.projects)S.projects=d.data.projects;
-      if(d.data.artifacts)S.artifacts=d.data.artifacts;
-      if(d.data.curProject!==undefined)S.curProject=d.data.curProject;
-      if(d.data.settings){
-        // 合并设置，保留本地的敏感字段
-        const keep={apiKey:S.settings.apiKey,deepseekKey:S.settings.deepseekKey,
-          tavilyKey:S.settings.tavilyKey,cloudToken:S.settings.cloudToken,
-          passcodeA:S.settings.passcodeA,passcodeP:S.settings.passcodeP};
-        S.settings={...S.settings,...d.data.settings,...keep};
-      }
-      save();renderMemList();updateProjSb();renderArtsList();
+    if(Array.isArray(d.data)){
+      S.memories=d.data;save();renderMemList();invalidateMemCache();
       const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
       setCloudStatus('已同步 '+S.memories.length+' 条 · '+t);
-      if(showMsg)toast('云端同步完成：'+S.memories.length+'条记忆 '+Object.keys(S.projects).length+'个项目 '+Object.keys(S.artifacts).length+'个作品');
+      if(showMsg)toast('已从云端同步 '+S.memories.length+' 条记忆');
     }
     return{ok:true,found:true};
   }catch(e){
@@ -1499,7 +1490,7 @@ function stopCloudAutoSync(){if(_cloudTimer){clearInterval(_cloudTimer);_cloudTi
 window.addEventListener('beforeunload',()=>{
   if(S.settings.cloudAutoSync&&cloudReady()){
     const c=S.settings;
-    const url=c.cloudApi+'/api/sync?user='+encodeURIComponent(c.cloudUser);
+    const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
     const headers={'Content-Type':'application/json'};
     if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
     navigator.sendBeacon(url,JSON.stringify({memories:S.memories}));
@@ -2087,9 +2078,10 @@ function addMem(){
   S.memories.push({id:'mm'+Date.now(),text:t,valence:v,arousal:a,createdAt:Date.now()});
   i.value='';
   setMemV(0);setMemA(0.5);
+  invalidateMemCache();
   save();renderMemList();toast('记忆已保存');
 }
-function delMem(id){if(!confirm('删除这条记忆？'))return;S.memories=S.memories.filter(m=>m.id!==id);save();renderMemList();toast('已删除')}
+function delMem(id){if(!confirm('删除这条记忆？'))return;S.memories=S.memories.filter(m=>m.id!==id);invalidateMemCache();save();renderMemList();toast('已删除')}
 function editMem(id){
   const m=S.memories.find(x=>x.id===id);if(!m)return;
   const item=document.getElementById('mit-'+id);if(!item)return;
@@ -2110,7 +2102,7 @@ function saveEditMem(id){
   const ta=document.getElementById('meta-'+id);if(!ta)return;
   const txt=ta.value.trim();if(!txt){toast('内容不能为空');return}
   const m=S.memories.find(x=>x.id===id);if(!m)return;
-  m.text=txt;save();renderMemList();toast('记忆已更新');
+  m.text=txt;invalidateMemCache();save();renderMemList();toast('记忆已更新');
 }
 
 function showArtFromMsg(btn){
