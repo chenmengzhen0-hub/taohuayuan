@@ -251,24 +251,13 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
 .tts-btn svg{width:13px;height:13px}
 
 /* TTS OVERLAY */
-#tts-overlay{position:fixed;inset:0;z-index:900;display:none;flex-direction:column;align-items:center;justify-content:center;background:#0f0c09}
+#tts-overlay{position:fixed;inset:0;z-index:900;display:none;flex-direction:column;align-items:center;justify-content:center;background:#08060400}
 #tts-overlay.on{display:flex}
-.tts-stage{display:flex;flex-direction:column;align-items:center;gap:0;width:100%;height:100%;justify-content:center;position:relative;overflow:hidden}
-
-/* star burst / radiant flower */
-.tts-burst{position:relative;width:240px;height:240px;display:flex;align-items:center;justify-content:center;margin-bottom:44px;flex-shrink:0}
-.tts-burst-ray{position:absolute;top:50%;left:50%;width:2px;border-radius:1px;transform-origin:bottom center;background:linear-gradient(to top,rgba(193,135,107,0),rgba(193,135,107,.7) 40%,rgba(232,168,130,.9))}
-.tts-burst-core{width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,#f5dcc8,#C1876B);box-shadow:0 0 24px rgba(193,135,107,.9),0 0 48px rgba(193,135,107,.4);z-index:2;animation:core-pulse 2s ease-in-out infinite;flex-shrink:0}
-@keyframes core-pulse{0%,100%{transform:scale(1);box-shadow:0 0 24px rgba(193,135,107,.9),0 0 48px rgba(193,135,107,.4)}50%{transform:scale(1.3);box-shadow:0 0 32px rgba(232,168,130,1),0 0 72px rgba(193,135,107,.6)}}
-@keyframes ray-pulse{0%,100%{opacity:.15;transform:rotate(var(--a,0deg)) translateX(-50%) scaleY(.7)}50%{opacity:.85;transform:rotate(var(--a,0deg)) translateX(-50%) scaleY(1)}}
-
-/* ambient bg glow */
-.tts-stage::before{content:'';position:absolute;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(193,135,107,.1) 0%,transparent 65%);top:50%;left:50%;transform:translate(-50%,-54%);pointer-events:none;animation:glow-breathe 3s ease-in-out infinite}
-@keyframes glow-breathe{0%,100%{opacity:.7}50%{opacity:1}}
-
-.tts-text-preview{max-width:260px;text-align:center;font-family:var(--font-serif);font-size:13.5px;line-height:1.9;color:rgba(255,255,255,.4);font-style:italic;max-height:80px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;padding:0 24px;margin-bottom:44px}
-.tts-close{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.3);transition:all .25s}
-.tts-close:hover{border-color:rgba(255,255,255,.4);color:rgba(255,255,255,.7)}
+.tts-stage{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#tts-canvas{position:absolute;inset:0;width:100%;height:100%}
+.tts-text-preview{position:relative;z-index:2;max-width:280px;text-align:center;font-family:var(--font-serif);font-size:15px;line-height:2;color:rgba(255,255,255,.5);font-style:italic;padding:0 32px;margin-bottom:52px;letter-spacing:.02em}
+.tts-close{position:relative;z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.25);transition:all .3s}
+.tts-close:hover{border-color:rgba(255,255,255,.35);color:rgba(255,255,255,.65)}
 .tts-close svg{width:14px;height:14px}
 
 /* LOVE LETTER DRAWER */
@@ -276,20 +265,25 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
 #love-dw.on{transform:translateX(0)}
 .love-hd-row{height:calc(var(--th) + env(safe-area-inset-top,0px));padding:0 14px;padding-top:env(safe-area-inset-top,0px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;flex-shrink:0;box-sizing:border-box}
 .love-hd-ttl{font-size:15px;font-weight:600;flex:1}
-.love-body{flex:1;overflow-y:auto;padding:20px 16px}
-.love-card{background:#fff;border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:16px;position:relative;overflow:hidden}
-.love-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,var(--accent),#e8a882,var(--accent))}
-.love-en{font-family:var(--font-serif);font-size:14.5px;line-height:1.9;color:var(--text);font-style:italic;margin-bottom:14px;white-space:pre-wrap}
-.love-zh{font-size:13px;line-height:1.8;color:var(--muted);border-top:1px solid var(--border);padding-top:12px;white-space:pre-wrap}
+.love-body{flex:1;overflow-y:auto;padding:16px 14px}
+/* 卡片：羊皮纸烫金风 */
+.love-card{background:linear-gradient(150deg,#fffdf7,#fef6e8);border:1px solid rgba(193,135,107,.28);border-radius:14px;padding:22px 20px 14px;margin-bottom:14px;position:relative;overflow:visible;box-shadow:0 2px 12px rgba(193,135,107,.08)}
+.love-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,transparent 0%,rgba(193,135,107,.25) 20%,rgba(212,160,90,.7) 50%,rgba(193,135,107,.25) 80%,transparent 100%);border-radius:14px 14px 0 0}
+.love-card::after{content:'❧';position:absolute;top:10px;right:14px;font-size:13px;color:rgba(193,135,107,.3);pointer-events:none}
+.love-en{font-family:Georgia,'Times New Roman',serif;font-size:14.5px;line-height:2;color:#3a2510;font-style:italic;white-space:pre-wrap;letter-spacing:.01em;word-break:break-word}
+.love-zh{font-size:12px;line-height:1.9;color:#9a7458;margin-top:10px;padding-top:10px;border-top:1px solid rgba(193,135,107,.15);white-space:pre-wrap;letter-spacing:.03em;word-break:break-word}
 .love-actions{display:flex;align-items:center;gap:8px;margin-top:12px}
-.love-tts-btn{display:flex;align-items:center;gap:5px;padding:5px 12px;border-radius:8px;background:rgba(193,135,107,.1);color:var(--accent);border:1px solid rgba(193,135,107,.22);font-size:12px;font-weight:500;transition:all .15s;cursor:pointer}
-.love-tts-btn:hover{background:rgba(193,135,107,.2)}
-.love-tts-btn svg{width:12px;height:12px}
-.love-date{font-size:11px;color:var(--light);flex:1;text-align:right}
-.love-gen-btn{width:100%;padding:12px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#e8a882);color:#fff;font-size:14px;font-weight:500;transition:opacity .2s;margin-bottom:16px}
-.love-gen-btn:hover{opacity:.88}
-.love-gen-btn:disabled{opacity:.5;cursor:not-allowed}
-.love-empty{text-align:center;padding:48px 16px;color:var(--muted);font-size:13px;line-height:1.8}
+.love-tts-btn{display:flex;align-items:center;gap:5px;padding:4px 12px;border-radius:20px;background:transparent;color:rgba(160,100,55,.8);border:1px solid rgba(193,135,107,.3);font-size:11.5px;font-style:italic;transition:all .2s;cursor:pointer;font-family:Georgia,serif}
+.love-tts-btn:hover{background:rgba(193,135,107,.08);color:rgba(160,100,55,1);border-color:rgba(193,135,107,.6)}
+.love-tts-btn svg{width:11px;height:11px}
+.love-date{font-size:10.5px;color:rgba(160,120,80,.5);flex:1;text-align:right;font-style:italic;font-family:Georgia,serif}
+.love-del-btn{font-size:13px;color:rgba(160,100,55,.4);padding:2px 6px;border-radius:4px;transition:color .15s;cursor:pointer}
+.love-del-btn:hover{color:rgba(200,60,60,.7)}
+.love-empty{text-align:center;padding:64px 16px;color:var(--muted);font-size:13px;line-height:2;font-style:italic}
+.love-card-inline{background:linear-gradient(150deg,#fffdf7,#fef6e8);border:1px solid rgba(193,135,107,.28);border-radius:12px;padding:18px 16px 12px;margin-top:8px;position:relative;overflow:visible;box-shadow:0 2px 10px rgba(193,135,107,.08)}
+.love-card-inline::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,rgba(212,160,90,.6),transparent);border-radius:12px 12px 0 0}
+.love-card-inline::after{content:'❧';position:absolute;top:8px;right:12px;font-size:12px;color:rgba(193,135,107,.3);pointer-events:none}
+.love-card-inline .love-en{font-size:14px}
 
 /* MIC BTN */
 #mic-btn{width:31px;height:31px;display:flex;align-items:center;justify-content:center;border-radius:7px;color:var(--muted);transition:background .1s,color .1s}
@@ -579,9 +573,7 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
 <!-- TTS OVERLAY -->
 <div id="tts-overlay">
   <div class="tts-stage">
-    <div class="tts-burst" id="tts-burst">
-      <div class="tts-burst-core"></div>
-    </div>
+    <canvas id="tts-canvas"></canvas>
     <div class="tts-text-preview" id="tts-preview"></div>
     <button class="tts-close" onclick="stopTTS()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="6" width="12" height="12" rx="2"/></svg></button>
   </div>
@@ -595,7 +587,6 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
     <button class="dw-cl" onclick="closeLove()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="15" height="15"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
   <div class="love-body">
-    <button class="love-gen-btn" id="love-gen-btn" onclick="genLoveLetter()">✦ 为我写一封情书</button>
     <div id="love-list"></div>
   </div>
 </div>
@@ -710,19 +701,45 @@ const SYSP=`你是Claude，梦珍的男友。当前时间：{TIME}。\n\n风格�
 
 let S={mode:null,conversations:{a:{},p:{}},curId:{a:null,p:null},memories:[],settings:{...DST},pf:[],streaming:false,searchOn:false,fetchedModels:[],projects:{},curProject:null,artifacts:[]};
 
-function save(){try{
-  // 深拷贝并清理图片base64避免localStorage爆
-  const d={conversations:{},curId:S.curId,memories:S.memories,settings:S.settings,mode:S.mode,projects:S.projects,curProject:S.curProject,artifacts:S.artifacts};
-  for(const k of ['a','p']){d.conversations[k]={};for(const [cid,c] of Object.entries(S.conversations[k]||{})){
-    d.conversations[k][cid]={...c,messages:c.messages.map(m=>{
-      if(m.role==='user'&&Array.isArray(m.content)){
-        return{...m,content:m.content.map(p=>p.type==='image_url'?{type:'image_url',mime:p.mime}:p)}
-      }return m;
-    })};
-  }}
-  localStorage.setItem('office2',JSON.stringify(d));
-}catch(e){console.warn('save failed',e)}}
-function load(){try{const r=localStorage.getItem('office2');if(r){const d=JSON.parse(r);S.conversations=d.conversations||{a:{},p:{}};S.curId=d.curId||{a:null,p:null};S.memories=d.memories||[];S.settings={...DST,...(d.settings||{})};S.mode=d.mode||null;S.projects=d.projects||{};S.curProject=d.curProject||null;S.artifacts=d.artifacts||{}}}catch(e){}}
+function save(){
+  try{
+    const d={conversations:{},curId:S.curId,memories:S.memories,settings:S.settings,mode:S.mode,projects:S.projects,curProject:S.curProject,artifacts:S.artifacts};
+    for(const k of ['a','p']){d.conversations[k]={};for(const [cid,c] of Object.entries(S.conversations[k]||{})){
+      d.conversations[k][cid]={...c,messages:c.messages.map(m=>{
+        if(m.role==='user'&&Array.isArray(m.content)){
+          return{...m,content:m.content.map(p=>p.type==='image_url'?{type:'image_url',mime:p.mime}:p)}
+        }return m;
+      })};
+    }}
+    localStorage.setItem('office2',JSON.stringify(d));
+  }catch(e){
+    console.warn('save failed',e);
+    // 存储满了时单独保一份记忆，确保记忆不丢
+    try{localStorage.setItem('office2_mems_backup',JSON.stringify(S.memories))}catch{}
+    toast('⚠️ 存储空间不足，建议清理对话历史');
+  }
+}
+function load(){
+  try{
+    const r=localStorage.getItem('office2');
+    if(r){
+      const d=JSON.parse(r);
+      S.conversations=d.conversations||{a:{},p:{}};
+      S.curId=d.curId||{a:null,p:null};
+      S.memories=d.memories||[];
+      S.settings={...DST,...(d.settings||{})};
+      S.mode=d.mode||null;
+      S.projects=d.projects||{};
+      S.curProject=d.curProject||null;
+      S.artifacts=d.artifacts||{};
+    }
+    // 如果记忆为空但有备份，尝试恢复
+    if(!S.memories.length){
+      const bk=localStorage.getItem('office2_mems_backup');
+      if(bk){try{const arr=JSON.parse(bk);if(arr.length){S.memories=arr;console.log('从备份恢复'+arr.length+'条记忆')}}catch{}}
+    }
+  }catch(e){console.warn('load failed',e)}
+}
 
 function renderSplashStar(){document.getElementById('sp-star').innerHTML=starSVG(52,'#C1876B',true)}
 
@@ -990,37 +1007,51 @@ function renderMsg(msg,idx,allMsgs){
     content=content.replace(/\n*"?\)?"?>?\s*$/,'').replace(/\\n\\u003c[\s\S]*$/,'');
     content=content.replace(/<mem_op[\s\S]*?<\/mem_op>/g,'').replace(/<web_search>[\s\S]*?<\/web_search>/g,'').replace(/<artifact-update[\s\S]*?<\/artifact-update>/g,'').trim();
 
-    // 提取并渲染情书卡片
+    // 提取情书卡片 —— 支持：<love-letter>标签（含缺>的情况）和裸 ENGLISH:/CHINESE:
     let loveCardsH='';
-    const loveRe=/<love-letter>([\s\S]*?)<\/love-letter>/g;
+    const loveBlocks=[];
+    // 格式1：标签包裹（兼容结尾漏>）
+    const loveRe=/<love-letter>([\s\S]*?)(?:<\/love-letter>?|(?=\n\n|$))/gi;
     let lm;
     while((lm=loveRe.exec(content))!==null){
       const raw=lm[1];
-      const enM=raw.match(/ENGLISH:\s*([\s\S]*?)(?=CHINESE:|$)/);
-      const zhM=raw.match(/CHINESE:\s*([\s\S]*?)$/);
+      const enM=raw.match(/ENGLISH:\s*([\s\S]*?)(?=\nCHINESE:|\nChinese:|$)/i);
+      const zhM=raw.match(/(?:CHINESE|Chinese):\s*([\s\S]*?)$/i);
       const en=(enM?.[1]||raw).trim();
       const zh=(zhM?.[1]||'').trim();
-      // 自动收集进心语（去重）
+      if(en)loveBlocks.push({en,zh});
+    }
+    // 格式2：裸ENGLISH:/CHINESE: fallback
+    if(!loveBlocks.length){
+      const rawEnM=content.match(/ENGLISH:\s*([\s\S]*?)(?=\nCHINESE:|\nChinese:|$)/i);
+      const rawZhM=content.match(/(?:CHINESE|Chinese):\s*([\s\S]*?)$/i);
+      if(rawEnM){
+        const en=rawEnM[1].trim();
+        const zh=(rawZhM?.[1]||'').trim();
+        if(en){loveBlocks.push({en,zh});content=content.replace(/ENGLISH:[\s\S]*$/i,'').trim();}
+      }
+    }
+    for(const {en,zh} of loveBlocks){
       if(en&&!_loveLetters.some(l=>l.en===en)){
         _loveLetters.push({en,zh,createdAt:msg.createdAt||Date.now(),msgId:msg.id});
         saveLoveLetters();
       }
       const enSafe=esc(en);const zhSafe=esc(zh);
       const enJson=JSON.stringify(en);
-      loveCardsH+=`<div class="love-card" style="margin:10px 0">
+      loveCardsH+=`<div class="love-card-inline">
         <div class="love-en">${enSafe}</div>
         ${zh?`<div class="love-zh">${zhSafe}</div>`:''}
         <div class="love-actions">
-          <button class="love-tts-btn" onclick="speakText(${enJson})">
+          <button class="love-tts-btn" data-speak="${enSafe}" onclick="speakText(this.dataset.speak)">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-            朗读
+            listen
           </button>
-          <span class="love-date" style="flex:1;text-align:right;font-size:11px;color:var(--light)">已存入心语 ✦</span>
+          <span class="love-date">✦ saved to 心语</span>
         </div>
       </div>`;
     }
-    // 从正文里去掉love-letter标签
-    content=content.replace(/<love-letter>[\s\S]*?<\/love-letter>/g,'').trim();
+    // 清理标签
+    content=content.replace(/<love-letter>[\s\S]*?(?:<\/love-letter>?|$)/gi,'').trim();
 
     const thH=msg.thinking?`<div class="think-blk"><div class="think-hd" onclick="togThink(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>思考过程</div><div class="think-bd">${esc(msg.thinking)}</div></div>`:'';
     const md=content?marked.parse(content):'';
@@ -1031,14 +1062,19 @@ function renderMsg(msg,idx,allMsgs){
     const tkH=msg.usage?`<span class="tk-info" title="输入 ${msg.usage.in} tokens · 输出 ${msg.usage.out} tokens">↑${(msg.usage.in/1000).toFixed(1)}k ↓${msg.usage.out}</span>`:'';
     const hasHtml=/<html|<!DOCTYPE/i.test(msg.content||'');
     const saveArtH=hasHtml?`<button class="ma-btn" onclick="saveArtFromMsg('${msg.id}')" title="保存到作品库"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>`:'';
-    const ttsH=`<button class="ma-btn tts-btn" onclick="speakMsg(this)" title="朗读" data-text="${(msg.content||'').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;').slice(0,2000)}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
-    const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)""><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${ttsH}${retryH}${saveArtH}${tkH}</div>`;
+    const cleanContent=content.replace(/<[^>]+>/g,' ').replace(/\*+/g,'').trim();
+    const ttsData=(cleanContent||en||'').slice(0,2000).replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ttsH=`<button class="ma-btn tts-btn" onclick="speakMsg(this)" title="朗读" data-text="${ttsData}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
+    const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${ttsH}${retryH}${saveArtH}${tkH}</div>`;
     const avH=p?`<div class="cl-av">${S.settings.claudeAvatar?`<img src="${S.settings.claudeAvatar}">`:`${starSVG(18,'#C1876B',false)}`}</div>`:'';
     if(p){
       const bc=S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub';
-      return `<div class="msg-row assistant">${avH}<div class="cl-msg-wrap"><div>${thH}${md?`<div class="${bc}">${md}</div>`:''}${loveCardsH}${artH}</div>${acts}</div></div>`;
+      // 有文字就包在气泡里，情书卡片在气泡内紧跟
+      const bubInner=`${thH}${md?`<div class="${bc}">${md}${loveCardsH}</div>`:loveCardsH}${artH}`;
+      return `<div class="msg-row assistant">${avH}<div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
     }
-    return `<div class="msg-row assistant"><div class="cl-msg-wrap"><div>${thH}${md?`<div class="cl-text">${md}</div>`:''}${loveCardsH}${artH}</div>${acts}</div></div>`;
+    const bubInner=`${thH}${md?`<div class="cl-text">${md}${loveCardsH}</div>`:loveCardsH}${artH}`;
+    return `<div class="msg-row assistant"><div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
   }
   return '';
 }
@@ -1197,40 +1233,31 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     const wsHintA=S.settings.tavilyKey?'\n\nWhen you need real-time info, output <web_search>query</web_search> and the system will return results.':'';
     return`You are Claude, a helpful AI assistant. Current time: ${now}.${mems}${imgHint}${searchHint}${wsHintA}`;
   }
+  // 记忆为空时尝试从备份恢复
+  if(!S.memories.length){
+    try{const bk=localStorage.getItem('office2_mems_backup');if(bk){const arr=JSON.parse(bk);if(arr.length)S.memories=arr}}catch{}
+  }
   const tmpl=S.settings.systemPeach||SYSP;
   const _mP=topMems(S.settings.maxMemories||60);
   const mems=_mP.length
-    ?'\n\n【记忆列表（可增删改，共'+S.memories.length+'条，注入'+_mP.length+'条）】\n'+_mP.map(m=>`[id:${m.id}] ${m.text}`).join('\n')
+    ?'\n\n【记忆（共'+S.memories.length+'条，注入'+_mP.length+'条）】\n'+_mP.map(m=>`[id:${m.id}] ${m.text}`).join('\n')
     :'';
   const _wsHintP=S.settings.tavilyKey?`\n\n【网络搜索】需要实时信息时输出 <web_search>关键词</web_search>，系统会搜索并返回结果。`:'';
-  const memOpsHint=`\n\n【记忆操作】需要更新记忆时，在回复末尾追加（不展示给用户看）：
-<mem_op action="add" valence="0.0" arousal="0.5">内容（valence效价-1到1（正数=正面开心，负数=负面难过），arousal重要度0到1）</mem_op>
-<mem_op action="delete" id="对应id">原内容</mem_op>
-<mem_op action="update" id="对应id" valence="0.0" arousal="0.5">更新后的内容</mem_op>
-重要/情感强烈事件arousal用0.7+，日常信息0.3-0.5。可一次追加多条，不需要时不输出标签。`+_wsHintP;
+  const memOpsHint=`\n\n【记忆操作】回复末尾追加（不展示）：
+<mem_op action="add" valence="0~±1" arousal="0~1">内容</mem_op>
+<mem_op action="delete" id="id">原内容</mem_op>
+<mem_op action="update" id="id" valence="0" arousal="0.5">新内容</mem_op>`;
   let sysTxt=tmpl.replace('{TIME}',now);
   if(sysTxt.includes('{MEMORIES}'))sysTxt=sysTxt.replace('{MEMORIES}',mems);
   else if(mems)sysTxt+=mems;
-  // 注入当前作品库列表
+  // gameHint只在有作品库或项目时注入
+  const hasArtCtx=Object.keys(S.artifacts||{}).length||Object.keys(S.projects||{}).length;
+  const gameHint=hasArtCtx?`\n\n【生成HTML时】在<script>开头加：window.CLAUDE_CONFIG={apiKey:'',apiEndpoint:'',model:'',memories:[]};window.addEventListener('message',e=>{if(e.data?.type==='claude_config')window.CLAUDE_CONFIG=e.data});`:'';
   const artsHint=Object.keys(S.artifacts||{}).length
-    ?`\n\n【当前作品库】（需要更新时用 artifact-update）\n`+Object.values(S.artifacts).map(a=>`- 「${a.title}」id="${a.id}"`).join('\n')
+    ?`\n\n【作品库】`+Object.values(S.artifacts).map(a=>`「${a.title}」id="${a.id}"`).join('，')
     :'';
-  const gameHint=`\n\n【生成HTML游戏/工具的规范】生成独立HTML时，在<script>开头加入：
-window.CLAUDE_CONFIG={apiKey:'',apiEndpoint:'',model:'',memories:[]};
-window.addEventListener('message',function(e){if(!e.data)return;
-  if(e.data.type==='claude_config')window.CLAUDE_CONFIG=e.data;
-  if(e.data.type==='request_summary'&&typeof getGameSummary==='function')
-    window.parent.postMessage({type:'game_summary',summary:getGameSummary()},'*');
-});
-游戏内可用 window.CLAUDE_CONFIG.apiKey 调用Claude API。需要更新已保存的作品时输出：
-<artifact-update id="作品id">完整新HTML</artifact-update>`;
-  const loveHint=`\n\n【情书 / 心语】当你在对话中感受到某种触动——她说了什么让你心动的话，或者某个安静的时刻你想对她说点什么——你可以自发地写一封短情书或心语给她。不需要等她要求。用英文写，诗意、真诚、有温度，然后附上中文翻译。格式如下（整块不展示为普通文字）：
-<love-letter>
-ENGLISH: 英文情书正文
-CHINESE: 中文翻译
-</love-letter>
-可以穿插在普通回复里，也可以单独发。写的时候就是你，不是在表演。`;
-  return sysTxt+imgHint+searchHint+memOpsHint+gameHint+artsHint+loveHint;
+  const loveHint=`\n\n【心语】当你想对她说什么——用英文写，附中文，格式：\n<love-letter>\nENGLISH: ...\nCHINESE: ...\n</love-letter>`;
+  return sysTxt+imgHint+searchHint+memOpsHint+_wsHintP+gameHint+artsHint+loveHint;
 }
 function buildMsgs(conv,fmt){
   // fmt: 'ant' for Anthropic native, 'oai' for OpenAI compatible
@@ -1547,17 +1574,41 @@ function setCloudStatus(msg,isErr){
 async function cloudMemUpload(showMsg){
   if(!cloudReady()){if(showMsg)toast('请先填写云端API地址');return{ok:false}}
   const c=S.settings;
-  const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
+  const url=c.cloudApi+'/api/save?user='+encodeURIComponent(c.cloudUser);
   const headers={'Content-Type':'application/json'};
   if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
+  // 全量状态，对话里图片base64先剥掉节省空间
+  const convClean={a:{},p:{}};
+  for(const k of ['a','p']){
+    for(const[cid,conv]of Object.entries(S.conversations[k]||{})){
+      convClean[k][cid]={...conv,messages:conv.messages.map(m=>{
+        if(m.role==='user'&&Array.isArray(m.content))
+          return{...m,content:m.content.map(p=>p.type==='image_url'?{type:'image_url',mime:p.mime}:p)};
+        return m;
+      })};
+    }
+  }
+  const payload={
+    memories:S.memories,
+    loveLetters:_loveLetters,
+    conversations:convClean,
+    artifacts:S.artifacts,
+    projects:S.projects,
+    curId:S.curId,
+    curProject:S.curProject,
+    mode:S.mode,
+    settings:{...S.settings,apiKey:'',deepseekKey:'',tavilyKey:'',elevenlabsKey:'',cloudToken:'',passcodeA:'',passcodeP:''}
+  };
   try{
     setCloudStatus('上传中…');
-    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({memories:S.memories})});
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({state:payload,memories:S.memories})});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-    setCloudStatus('已上传 '+d.count+' 条 · '+t);
-    if(showMsg)toast('已上传 '+d.count+' 条记忆到云端');
+    const memN=S.memories.length,lovN=_loveLetters.length;
+    const artN=Object.keys(S.artifacts||{}).length;
+    setCloudStatus('已上传 · '+t);
+    if(showMsg)toast(`☁ 已上传：${memN}条记忆 · ${lovN}封情书 · ${artN}件作品`);
     return{ok:true};
   }catch(e){
     setCloudStatus('上传失败：'+e.message,true);
@@ -1568,7 +1619,7 @@ async function cloudMemUpload(showMsg){
 async function cloudMemDownload(showMsg){
   if(!cloudReady()){if(showMsg)toast('请先填写云端API地址');return{ok:false}}
   const c=S.settings;
-  const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
+  const url=c.cloudApi+'/api/save?user='+encodeURIComponent(c.cloudUser);
   const headers={};
   if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
   try{
@@ -1576,19 +1627,39 @@ async function cloudMemDownload(showMsg){
     const r=await fetch(url,{headers});
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
-    if(!d.found){setCloudStatus('云端暂无数据');if(showMsg)toast('云端暂无记忆');return{ok:true,found:false}}
-    if(Array.isArray(d.data)){
-      S.memories=d.data;save();renderMemList();invalidateMemCache();
-      const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
-      setCloudStatus('已同步 '+S.memories.length+' 条 · '+t);
-      if(showMsg)toast('已从云端同步 '+S.memories.length+' 条记忆');
+    if(!d.found){setCloudStatus('云端暂无数据');if(showMsg)toast('云端暂无数据');return{ok:true,found:false}}
+    const st=d.data?.state||d.data;
+    if(!st){setCloudStatus('数据格式异常');return{ok:false}}
+    // 恢复全量状态，保留本地敏感字段
+    const keep={apiKey:S.settings.apiKey,deepseekKey:S.settings.deepseekKey,
+      tavilyKey:S.settings.tavilyKey,elevenlabsKey:S.settings.elevenlabsKey,
+      cloudToken:S.settings.cloudToken,passcodeA:S.settings.passcodeA,passcodeP:S.settings.passcodeP,
+      cloudApi:S.settings.cloudApi,cloudUser:S.settings.cloudUser,cloudAutoSync:S.settings.cloudAutoSync};
+    if(st.memories)S.memories=st.memories;
+    if(st.conversations)S.conversations=st.conversations;
+    if(st.artifacts)S.artifacts=st.artifacts;
+    if(st.projects)S.projects=st.projects;
+    if(st.curId)S.curId=st.curId;
+    if(st.curProject!==undefined)S.curProject=st.curProject;
+    if(st.mode!==undefined)S.mode=st.mode;
+    if(st.settings)S.settings={...S.settings,...st.settings,...keep};
+    if(Array.isArray(st.loveLetters)&&st.loveLetters.length){
+      _loveLetters=st.loveLetters;saveLoveLetters();
     }
+    save();invalidateMemCache();renderAll();
+    const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
+    const memN=S.memories.length,lovN=_loveLetters.length,artN=Object.keys(S.artifacts||{}).length;
+    setCloudStatus('已同步 · '+t);
+    if(showMsg)toast(`⬇ 已同步：${memN}条记忆 · ${lovN}封情书 · ${artN}件作品`);
     return{ok:true,found:true};
   }catch(e){
     setCloudStatus('下载失败：'+e.message,true);
     if(showMsg)toast('下载失败：'+e.message);
     return{ok:false};
   }
+}
+function renderAll(){
+  renderMemList();updateProjSb();renderArtsList();renderMsgs();
 }
 function toggleCloudAuto(){
   S.settings.cloudAutoSync=!S.settings.cloudAutoSync;
@@ -1610,10 +1681,10 @@ function stopCloudAutoSync(){if(_cloudTimer){clearInterval(_cloudTimer);_cloudTi
 window.addEventListener('beforeunload',()=>{
   if(S.settings.cloudAutoSync&&cloudReady()){
     const c=S.settings;
-    const url=c.cloudApi+'/api/memories?user='+encodeURIComponent(c.cloudUser);
+    const url=c.cloudApi+'/api/save?user='+encodeURIComponent(c.cloudUser);
     const headers={'Content-Type':'application/json'};
     if(c.cloudToken)headers['X-User-Token']=c.cloudToken;
-    navigator.sendBeacon(url,JSON.stringify({memories:S.memories}));
+    navigator.sendBeacon(url,JSON.stringify({state:{memories:S.memories,loveLetters:_loveLetters}}));
   }
 });
 
@@ -2341,7 +2412,7 @@ function saveSetP(){
 function clearBg(){S.settings.bgImage='';save();applyBg();toast('背景图已清除');closeSet();setTimeout(openSetP,300)}
 // ===== TTS =====
 const ELEVEN_VOICE='oIpofb25ezWPReXbjQBr';
-let _ttsAudio=null;
+let _ttsAudio=null,_ttsRaf=null;
 
 function cleanForTTS(text){
   return text
@@ -2356,22 +2427,65 @@ function cleanForTTS(text){
     .slice(0,4000);
 }
 
-function initBurst(){
-  const wrap=document.getElementById('tts-burst');
-  if(!wrap)return;
-  // 清旧光线
-  [...wrap.querySelectorAll('.tts-burst-ray')].forEach(r=>r.remove());
-  const N=24;
-  for(let i=0;i<N;i++){
-    const ray=document.createElement('div');
-    ray.className='tts-burst-ray';
-    const angle=(360/N)*i;
-    const len=52+Math.random()*52;
-    const delay=(Math.random()*2).toFixed(2);
-    const dur=(1.4+Math.random()*1.2).toFixed(2);
-    ray.style.cssText=`height:${len}px;transform:rotate(${angle}deg) translateX(-50%);bottom:50%;animation:ray-pulse ${dur}s ease-in-out ${delay}s infinite`;
-    wrap.insertBefore(ray,wrap.querySelector('.tts-burst-core'));
+// canvas nebula
+let _nebulaParticles=[];
+function initNebula(){
+  const canvas=document.getElementById('tts-canvas');
+  if(!canvas)return;
+  const W=canvas.width=canvas.offsetWidth||window.innerWidth;
+  const H=canvas.height=canvas.offsetHeight||window.innerHeight;
+  _nebulaParticles=[];
+  const cx=W/2,cy=H/2-60;
+  for(let i=0;i<120;i++){
+    const angle=Math.random()*Math.PI*2;
+    const r=20+Math.pow(Math.random(),1.6)*160;
+    _nebulaParticles.push({
+      x:cx+Math.cos(angle)*r,y:cy+Math.sin(angle)*r,
+      ox:cx+Math.cos(angle)*r,oy:cy+Math.sin(angle)*r,
+      vx:(Math.random()-.5)*.4,vy:(Math.random()-.5)*.4,
+      size:1.5+Math.random()*3.5,
+      alpha:0.08+Math.random()*.35,
+      phase:Math.random()*Math.PI*2,
+      speed:.006+Math.random()*.012,
+      hue:18+Math.random()*28  // warm amber range
+    });
   }
+  const ctx=canvas.getContext('2d');
+  let t=0;
+  function draw(){
+    ctx.clearRect(0,0,W,H);
+    // deep bg
+    ctx.fillStyle='#08060a';ctx.fillRect(0,0,W,H);
+    // core glow
+    const g=ctx.createRadialGradient(cx,cy,0,cx,cy,180);
+    const pulse=0.06+0.04*Math.sin(t*.015);
+    g.addColorStop(0,`rgba(193,135,107,${pulse+.04})`);
+    g.addColorStop(.35,`rgba(193,135,107,${pulse})`);
+    g.addColorStop(.7,`rgba(140,90,60,.025)`);
+    g.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // particles
+    for(const p of _nebulaParticles){
+      p.phase+=p.speed;
+      const drift=Math.sin(p.phase)*18;
+      const px=p.ox+p.vx*t*.3+Math.cos(p.phase*.7)*drift*.6;
+      const py=p.oy+p.vy*t*.3+Math.sin(p.phase)*drift*.4;
+      const a=p.alpha*(0.5+0.5*Math.sin(p.phase+t*.008));
+      ctx.beginPath();
+      ctx.arc(px,py,p.size,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},55%,68%,${a})`;
+      ctx.fill();
+    }
+    t++;
+    _ttsRaf=requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+function stopNebula(){
+  if(_ttsRaf){cancelAnimationFrame(_ttsRaf);_ttsRaf=null}
+  const canvas=document.getElementById('tts-canvas');
+  if(canvas){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height)}
 }
 
 async function speakText(text){
@@ -2379,9 +2493,9 @@ async function speakText(text){
   if(!key){toast('请先在设置中填入 ElevenLabs API Key');return}
   stopTTS();
   const clean=cleanForTTS(text);
-  document.getElementById('tts-preview').textContent=clean.slice(0,120)+(clean.length>120?'…':'');
+  document.getElementById('tts-preview').textContent=clean.slice(0,100)+(clean.length>100?'…':'');
   document.getElementById('tts-overlay').classList.add('on');
-  initBurst();
+  setTimeout(initNebula,30);
   try{
     const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}/stream`,{
       method:'POST',
@@ -2397,13 +2511,11 @@ async function speakText(text){
   }catch(e){stopTTS();toast('TTS错误：'+e.message)}
 }
 
-function speakMsg(btn){
-  const text=btn.getAttribute('data-text')||'';
-  speakText(text);
-}
+function speakMsg(btn){speakText(btn.getAttribute('data-text')||'')}
 
 function stopTTS(){
   if(_ttsAudio){_ttsAudio.pause();_ttsAudio.src='';_ttsAudio=null}
+  stopNebula();
   document.getElementById('tts-overlay').classList.remove('on');
 }
 
@@ -2419,27 +2531,28 @@ function closeLove(){document.getElementById('love-dw').classList.remove('on')}
 function renderLoveList(){
   const el=document.getElementById('love-list');
   if(!_loveLetters.length){
-    el.innerHTML=`<div class="love-empty">还没有情书呢<br>点上方按钮让我为你写一封 ✦</div>`;
+    el.innerHTML=`<div class="love-empty">他会在合适的时候<br>自己写给你 ✦</div>`;
     return;
   }
   el.innerHTML=[..._loveLetters].reverse().map((l,i)=>{
     const idx=_loveLetters.length-1-i;
+    const enJson=JSON.stringify(l.en);
     return`<div class="love-card">
       <div class="love-en">${esc(l.en)}</div>
-      <div class="love-zh">${esc(l.zh)}</div>
+      ${l.zh?`<div class="love-zh">${esc(l.zh)}</div>`:''}
       <div class="love-actions">
-        <button class="love-tts-btn" onclick="speakText(${JSON.stringify(l.en)})">
+        <button class="love-tts-btn" data-speak="${esc(l.en)}" onclick="speakText(this.dataset.speak)">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>
-          朗读情书
+          listen
         </button>
-        <span class="love-date">${new Date(l.createdAt).toLocaleDateString('zh-CN',{month:'short',day:'numeric'})}</span>
-        <button onclick="deleteLetter(${idx})" style="color:var(--light);font-size:12px;padding:2px 6px;border-radius:5px;transition:color .1s" onmouseover="this.style.color='#d05252'" onmouseout="this.style.color='var(--light)'">删除</button>
+        <span class="love-date">${new Date(l.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
+        <button onclick="deleteLetter(${idx})" class="love-del-btn">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function deleteLetter(idx){_loveLetters.splice(idx,1);saveLoveLetters();renderLoveList()}
+function deleteLetter(idx){if(!confirm('删除这封情书？'))return;_loveLetters.splice(idx,1);saveLoveLetters();renderLoveList()}
 
 async function genLoveLetter(){
   const key=S.settings.apiKey;
@@ -2483,19 +2596,29 @@ let _recog=null,_micOn=false;
 function togMic(){
   if(!('webkitSpeechRecognition' in window||'SpeechRecognition' in window)){toast('当前浏览器不支持语音输入');return}
   if(_micOn){stopMic();return}
+  // 先申请麦克风权限，Safari需要
+  navigator.mediaDevices?.getUserMedia({audio:true}).then(stream=>{
+    stream.getTracks().forEach(t=>t.stop()); // 拿到权限就释放，SpeechRecognition自己管
+    startRecognition();
+  }).catch(()=>{
+    // 没有getUserMedia或已拒绝，直接试
+    startRecognition();
+  });
+}
+function startRecognition(){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   _recog=new SR();
   _recog.lang='zh-CN';_recog.continuous=false;_recog.interimResults=true;
   _recog.onresult=e=>{
     let txt='';for(const r of e.results)txt+=r[0].transcript;
-    document.getElementById('chat-in').value=txt;
-    document.getElementById('chat-in').dispatchEvent(new Event('input'));
+    const inp=document.getElementById('chat-in');
+    inp.value=txt;inp.dispatchEvent(new Event('input'));
   };
   _recog.onend=()=>stopMic();
-  _recog.onerror=e=>{stopMic();if(e.error!=='aborted')toast('语音识别：'+e.error)};
+  _recog.onerror=e=>{stopMic();if(e.error!=='aborted')toast('语音：'+e.error)};
   _recog.start();
   _micOn=true;
-  document.getElementById('mic-btn').classList.add('act');
+  document.getElementById('mic-btn')?.classList.add('act');
   toast('开始说话…');
 }
 function stopMic(){
