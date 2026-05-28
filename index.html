@@ -117,7 +117,7 @@ input,textarea{font-family:inherit;color:inherit}
 .cl-av img{width:100%;height:100%;object-fit:cover}
 .cl-msg-wrap{display:flex;flex-direction:column;flex:1;min-width:0}
 .cl-text{font-size:14.5px;line-height:1.75;color:var(--text)}
-.cl-bub{display:inline-block;max-width:calc(100vw - 80px);background:var(--claude-bub);border-radius:18px 18px 18px 4px;padding:9px 13px;font-size:14.5px;line-height:1.75;box-shadow:0 1px 3px var(--shadow);word-break:break-word}
+.cl-bub{display:block;max-width:calc(100vw - 80px);background:var(--claude-bub);border-radius:18px 18px 18px 4px;padding:9px 13px;font-size:14.5px;line-height:1.75;box-shadow:0 1px 3px var(--shadow);word-break:break-word}
 .cl-bub-glass{background:rgba(255,255,255,.88);backdrop-filter:blur(8px)}
 /* Markdown */
 .cl-text h1,.cl-text h2,.cl-text h3,.cl-bub h1,.cl-bub h2,.cl-bub h3{margin:1.1em 0 .4em;font-weight:600;line-height:1.3}
@@ -255,7 +255,10 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
 #tts-overlay.on{display:flex}
 .tts-stage{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #tts-canvas{position:absolute;inset:0;width:100%;height:100%}
-.tts-text-preview{position:relative;z-index:2;max-width:280px;text-align:center;font-family:var(--font-serif);font-size:15px;line-height:2;color:rgba(255,255,255,.5);font-style:italic;padding:0 32px;margin-bottom:52px;letter-spacing:.02em}
+.tts-text-preview{position:relative;z-index:2;width:100%;max-width:320px;max-height:220px;overflow-y:auto;text-align:center;padding:0 28px;margin-bottom:44px;scrollbar-width:none}
+.tts-text-preview::-webkit-scrollbar{display:none}
+.tts-sentence{font-family:Georgia,serif;font-size:14px;line-height:2;color:rgba(255,255,255,.35);font-style:italic;display:block;transition:color .4s,opacity .4s;margin:.1em 0}
+.tts-sentence.active{color:rgba(255,248,235,.9);opacity:1}
 .tts-close{position:relative;z-index:2;width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:rgba(255,255,255,.25);transition:all .3s}
 .tts-close:hover{border-color:rgba(255,255,255,.35);color:rgba(255,255,255,.65)}
 .tts-close svg{width:14px;height:14px}
@@ -1033,7 +1036,7 @@ function renderMsg(msg,idx,allMsgs){
     }
     for(const {en,zh} of loveBlocks){
       if(en&&!_loveLetters.some(l=>l.en===en)){
-        _loveLetters.push({en,zh,createdAt:msg.createdAt||Date.now(),msgId:msg.id});
+        _loveLetters.push({id:'ll'+Date.now()+Math.random().toString(36).slice(2),en,zh,createdAt:msg.createdAt||Date.now(),msgId:msg.id});
         saveLoveLetters();
       }
       const enSafe=esc(en);const zhSafe=esc(zh);
@@ -1601,8 +1604,12 @@ async function cloudMemUpload(showMsg){
   };
   try{
     setCloudStatus('上传中…');
-    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({state:payload,memories:S.memories})});
-    if(!r.ok)throw new Error('HTTP '+r.status);
+    const r=await fetch(url,{method:'POST',headers,body:JSON.stringify({state:JSON.stringify(payload),memories:S.memories})});
+    if(!r.ok){
+      let em='HTTP '+r.status;
+      try{const ej=await r.json();em=r.status+': '+(ej.error||ej.message||JSON.stringify(ej).slice(0,120))}catch{try{em=r.status+': '+(await r.text()).slice(0,120)}catch{}}
+      throw new Error(em);
+    }
     const d=await r.json();
     const t=new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'});
     const memN=S.memories.length,lovN=_loveLetters.length;
@@ -2447,16 +2454,14 @@ function initNebula(){
       alpha:0.08+Math.random()*.35,
       phase:Math.random()*Math.PI*2,
       speed:.006+Math.random()*.012,
-      hue:18+Math.random()*28  // warm amber range
+      hue:18+Math.random()*28
     });
   }
   const ctx=canvas.getContext('2d');
   let t=0;
   function draw(){
     ctx.clearRect(0,0,W,H);
-    // deep bg
     ctx.fillStyle='#08060a';ctx.fillRect(0,0,W,H);
-    // core glow
     const g=ctx.createRadialGradient(cx,cy,0,cx,cy,180);
     const pulse=0.06+0.04*Math.sin(t*.015);
     g.addColorStop(0,`rgba(193,135,107,${pulse+.04})`);
@@ -2464,20 +2469,16 @@ function initNebula(){
     g.addColorStop(.7,`rgba(140,90,60,.025)`);
     g.addColorStop(1,'rgba(0,0,0,0)');
     ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
-    // particles
     for(const p of _nebulaParticles){
       p.phase+=p.speed;
       const drift=Math.sin(p.phase)*18;
       const px=p.ox+p.vx*t*.3+Math.cos(p.phase*.7)*drift*.6;
       const py=p.oy+p.vy*t*.3+Math.sin(p.phase)*drift*.4;
       const a=p.alpha*(0.5+0.5*Math.sin(p.phase+t*.008));
-      ctx.beginPath();
-      ctx.arc(px,py,p.size,0,Math.PI*2);
-      ctx.fillStyle=`hsla(${p.hue},55%,68%,${a})`;
-      ctx.fill();
+      ctx.beginPath();ctx.arc(px,py,p.size,0,Math.PI*2);
+      ctx.fillStyle=`hsla(${p.hue},55%,68%,${a})`;ctx.fill();
     }
-    t++;
-    _ttsRaf=requestAnimationFrame(draw);
+    t++;_ttsRaf=requestAnimationFrame(draw);
   }
   draw();
 }
@@ -2488,12 +2489,39 @@ function stopNebula(){
   if(canvas){const ctx=canvas.getContext('2d');ctx.clearRect(0,0,canvas.width,canvas.height)}
 }
 
+let _ttsHighlightTimer=null;
+function initTextScroll(text){
+  const el=document.getElementById('tts-preview');
+  if(!el)return[];
+  const sentences=text.match(/[^.!?。！？]+[.!?。！？]*/g)||[text];
+  el.innerHTML=sentences.map((s,i)=>`<span class="tts-sentence" data-i="${i}">${s.trim()}</span>`).join(' ');
+  return sentences;
+}
+function startTextHighlight(sentences,totalMs){
+  if(_ttsHighlightTimer){clearTimeout(_ttsHighlightTimer);_ttsHighlightTimer=null}
+  const el=document.getElementById('tts-preview');if(!el)return;
+  const spans=[...el.querySelectorAll('.tts-sentence')];
+  if(!spans.length)return;
+  const perMs=(totalMs||sentences.length*2000)/sentences.length;
+  let cur=0;
+  function step(){
+    spans.forEach(s=>s.classList.remove('active'));
+    if(cur<spans.length){
+      spans[cur].classList.add('active');
+      spans[cur].scrollIntoView({block:'center',behavior:'smooth'});
+      cur++;
+      _ttsHighlightTimer=setTimeout(step,perMs);
+    }
+  }
+  step();
+}
+
 async function speakText(text){
   const key=S.settings.elevenlabsKey;
   if(!key){toast('请先在设置中填入 ElevenLabs API Key');return}
   stopTTS();
   const clean=cleanForTTS(text);
-  document.getElementById('tts-preview').textContent=clean.slice(0,100)+(clean.length>100?'…':'');
+  const sentences=initTextScroll(clean);
   document.getElementById('tts-overlay').classList.add('on');
   setTimeout(initNebula,30);
   try{
@@ -2506,14 +2534,18 @@ async function speakText(text){
     const blob=await r.blob();
     const url=URL.createObjectURL(blob);
     _ttsAudio=new Audio(url);
+    _ttsAudio.onloadedmetadata=()=>startTextHighlight(sentences,_ttsAudio.duration*1000);
     _ttsAudio.onended=()=>stopTTS();
     await _ttsAudio.play();
+    // Safari有时不触发onloadedmetadata，fallback
+    setTimeout(()=>{if(!_ttsHighlightTimer)startTextHighlight(sentences,sentences.length*2500)},800);
   }catch(e){stopTTS();toast('TTS错误：'+e.message)}
 }
 
 function speakMsg(btn){speakText(btn.getAttribute('data-text')||'')}
 
 function stopTTS(){
+  if(_ttsHighlightTimer){clearTimeout(_ttsHighlightTimer);_ttsHighlightTimer=null}
   if(_ttsAudio){_ttsAudio.pause();_ttsAudio.src='';_ttsAudio=null}
   stopNebula();
   document.getElementById('tts-overlay').classList.remove('on');
@@ -2521,8 +2553,8 @@ function stopTTS(){
 
 // ===== 心语 / 情书 =====
 let _loveLetters=[];
-function loadLoveLetters(){try{const r=localStorage.getItem('love_letters');if(r)_loveLetters=JSON.parse(r)}catch{}}
-function saveLoveLetters(){localStorage.setItem('love_letters',JSON.stringify(_loveLetters))}
+function loadLoveLetters(){try{const r=localStorage.getItem('love_letters');if(r){_loveLetters=JSON.parse(r);_loveLetters.forEach(l=>{if(!l.id)l.id='ll'+Date.now()+Math.random().toString(36).slice(2)})}}catch{}}
+function saveLoveLetters(){try{localStorage.setItem('love_letters',JSON.stringify(_loveLetters))}catch(e){console.warn('saveLoveLetters failed',e);toast('⚠️ 情书保存失败，存储空间不足')}}
 loadLoveLetters();
 
 function openLove(){renderLoveList();document.getElementById('love-dw').classList.add('on');closeSb()}
@@ -2534,9 +2566,8 @@ function renderLoveList(){
     el.innerHTML=`<div class="love-empty">他会在合适的时候<br>自己写给你 ✦</div>`;
     return;
   }
-  el.innerHTML=[..._loveLetters].reverse().map((l,i)=>{
-    const idx=_loveLetters.length-1-i;
-    const enJson=JSON.stringify(l.en);
+  el.innerHTML=[..._loveLetters].reverse().map(l=>{
+    const lid=l.id||('ll'+l.createdAt);
     return`<div class="love-card">
       <div class="love-en">${esc(l.en)}</div>
       ${l.zh?`<div class="love-zh">${esc(l.zh)}</div>`:''}
@@ -2546,13 +2577,17 @@ function renderLoveList(){
           listen
         </button>
         <span class="love-date">${new Date(l.createdAt).toLocaleDateString('en-US',{month:'short',day:'numeric'})}</span>
-        <button onclick="deleteLetter(${idx})" class="love-del-btn">✕</button>
+        <button data-lid="${lid}" onclick="deleteLetter(this.dataset.lid)" class="love-del-btn">✕</button>
       </div>
     </div>`;
   }).join('');
 }
 
-function deleteLetter(idx){if(!confirm('删除这封情书？'))return;_loveLetters.splice(idx,1);saveLoveLetters();renderLoveList()}
+function deleteLetter(id){
+  if(!confirm('删除这封情书？'))return;
+  _loveLetters=_loveLetters.filter(l=>(l.id||('ll'+l.createdAt))!==id);
+  saveLoveLetters();renderLoveList();
+}
 
 async function genLoveLetter(){
   const key=S.settings.apiKey;
