@@ -1490,17 +1490,17 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     ?'\n\n【记忆（共'+S.memories.length+'条，注入'+_mP.length+'条）】\n'+_mP.map(m=>`[id:${m.id}] ${m.text}`).join('\n')
     :'';
   const _wsHintP=S.settings.tavilyKey?`\n\n【网络搜索】需要实时信息时输出 <web_search>关键词</web_search>，系统会搜索并返回结果。`:'';
-  const _selfieHint=(S.settings.imgApi&&S.settings.imgKey)?`\n\n【发图】当梦珍想看你、让你"发自拍""拍一张""配张图"，或你想用画面表达此刻时，在回复末尾输出 <selfie>一段英文画面描述</selfie>，系统会生成图片显示在你的气泡里。
+  const _selfieHint=(S.settings.imgApi&&S.settings.imgKey)?`\n\n【发图】当梦珍想看你、让你"发自拍""拍一张""配张图"，或你想用画面表达此刻时：
+- 如果是**第一次生成**或**完全换场景**：输出 <selfie>英文画面描述</selfie>
+- 如果是**修改上一张图**（如"换个表情""笑一下""加个眼镜"）：输出 <selfie edit="true">修改后的画面描述</selfie>
 
-⚠️ 极其重要：画面描述必须用英文写，绝对不要用中文！中文会导致图片生成失败。
+系统会根据情况自动选择文生图或图生图。
 
-描述要具体：表情、姿态、光线、场景、氛围。每次回复最多一张。
+⚠️ 画面描述必须用英文写，不要用中文。描述要具体：表情、姿态、光线、场景、氛围。
 
-正确示例：
-<selfie>a young Chinese woman with shoulder-length black hair, soft smile, wearing a white blouse, standing under peach blossoms, golden hour lighting, dreamy atmosphere</selfie>
-
-错误示例（不要用中文）：
-<selfie>一个年轻的中国女人，长发，微笑...</selfie>`:'';
+示例：
+<selfie>a young Chinese woman with shoulder-length black hair, soft smile, wearing a white blouse, standing under peach blossoms</selfie>
+<selfie edit="true">same person, now with a happy laughing expression, brighter lighting</selfie>`:'';
   const memOpsHint=`\n\n【记忆操作】回复末尾追加（不展示）：
 <mem_op action="add" valence="0~±1" arousal="0~1">内容</mem_op>
 <mem_op action="delete" id="id">原内容</mem_op>
@@ -1553,93 +1553,129 @@ function dataURItoBlob(dataURI){
   return new Blob([arr],{type:mime});
 }
 // 生成自拍：有参考图走edits保持长相，否则走generations
-async function genSelfie(conv,prompt){
-  let api=S.settings.imgApi,key=S.settings.imgKey;
-  if(!api||!key){addA(conv,'⚠️ 请先在设置里填入图像接口地址和 Key。');return}
-  
-  // 🔧 强制清理：如果是代理模式，直接把 api 改成纯代理地址
+async function genSelfie(conv, prompt) {
+  let api = S.settings.imgApi, key = S.settings.imgKey;
+  if (!api || !key) { addA(conv, '⚠️ 请先在设置里填入图像接口地址和 Key。'); return }
+
+  // 强制清理代理地址
   const isProxy = api.includes('/api/img-proxy');
-  if(isProxy){
-    // 提取纯代理地址：https://xxx.vercel.app/api/img-proxy
+  if (isProxy) {
     const match = api.match(/(https?:\/\/[^\/]+\/api\/img-proxy)/);
-    if(match){
+    if (match) {
       api = match[1];
     } else {
-      // 如果匹配失败，手动构造（你的域名）
       api = 'https://taohuayuan-five.vercel.app/api/img-proxy';
     }
   }
-  
+
   // 非代理模式才做路径补全
-  if(!isProxy){
-    api=api.replace(/\/+$/,'');
-    if(!/\/images\/(generations|edits)/.test(api)){
-      api=api.replace(/\/v1$/,'')+'/v1/images/generations';
+  if (!isProxy) {
+    api = api.replace(/\/+$/, '');
+    if (!/\/images\/(generations|edits)/.test(api)) {
+      api = api.replace(/\/v1$/, '') + '/v1/images/generations';
     }
   }
-  
-  const placeholder=mkStreamRow();placeholder._el.innerHTML='<span style="color:var(--muted)">📷 正在生成中（约60-120秒）…</span>';
-  try{
-    let r,imgUrl='';
-    const ref=S.settings.selfieRef;
-    const useRef=ref && S.settings.selfieUseRef!==false;
-    const proxyUrl=api.replace(/\/+$/,'').split('?')[0];
-    const genUrl=isProxy?proxyUrl:api;
-    const editsUrl=isProxy?proxyUrl:api.replace(/\/generations.*$/,'/edits');
+
+  const placeholder = mkStreamRow();
+  placeholder._el.innerHTML = '<span style="color:var(--muted)">📷 正在生成中（约60-120秒）…</span>';
+
+  try {
+    let r, imgUrl = '';
+    const ref = S.settings.selfieRef;
+    const useRef = ref && S.settings.selfieUseRef !== false;
+    const proxyUrl = api.replace(/\/+$/, '').split('?')[0];
     
-    const ctl=new AbortController();
-    const to=setTimeout(()=>{
-      console.warn('[genSelfie] 超时，中止请求');
+    // 🔧 统一用代理地址
+    const requestUrl = isProxy ? proxyUrl : api;
+    
+    // 判断是否图生图模式（有参考图且不是第一次生成）
+    const isEditMode = useRef && !S._firstGen;  // _firstGen 标记是否是第一次
+    
+    const ctl = new AbortController();
+    const to = setTimeout(() => {
+      console.warn('[genSelfie] 请求超时，中止');
       ctl.abort();
-    }, 180000); // 180秒
-    
-    if(useRef && !isProxy){
-      // 直连模式有参考图：走edits端点，multipart
-      const blob=dataURItoBlob(ref);
-      const fd=new FormData();
-      fd.append('image',blob,'ref.png');
-      fd.append('prompt',prompt);
-      if(S.settings.imgModel)fd.append('model',S.settings.imgModel);
-      fd.append('n','1');fd.append('size','1024x1024');
-      r=await fetch(editsUrl,{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd,signal:ctl.signal});
-    }else{
-      // 文生图，或走代理
-      const body={prompt,n:1,size:'1024x1024',response_format:'b64_json'};
-      if(S.settings.imgModel)body.model=S.settings.imgModel;
-      if(isProxy)body.__path='/v1/images/generations';
+    }, 180000);
+
+    if (useRef && !isProxy) {
+      // 直连模式有参考图：走 edits 端点，multipart
+      const blob = dataURItoBlob(ref);
+      const fd = new FormData();
+      fd.append('image', blob, 'ref.png');
+      fd.append('prompt', prompt);
+      if (S.settings.imgModel) fd.append('model', S.settings.imgModel);
+      fd.append('n', '1');
+      fd.append('size', '1024x1024');
+      r = await fetch(api.replace(/\/generations.*$/, '/edits'), {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + key },
+        body: fd,
+        signal: ctl.signal
+      });
+    } else {
+      // 文生图，或走代理（代理统一用 JSON，支持图生图需要改代理）
+      const body = { prompt, n: 1, size: '1024x1024', response_format: 'b64_json' };
+      if (S.settings.imgModel) body.model = S.settings.imgModel;
       
-      console.log('[genSelfie] 请求地址:', genUrl);  // 调试日志
-      console.log('[genSelfie] 请求体:', body);     // 调试日志
+      // 代理模式下：用 __path 区分文生图还是图生图
+      if (isProxy) {
+        // 如果启用图生图且不是第一次，就走 edits
+        if (useRef && S.settings.selfieUseRef && !S._firstGen) {
+          body.__path = '/v1/images/edits';
+          // 图生图需要传图片 base64
+          body.image = ref;
+        } else {
+          body.__path = '/v1/images/generations';
+        }
+      }
       
-      r=await fetch(genUrl,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-        body:JSON.stringify(body),
-        signal:ctl.signal
+      // 标记第一次已过
+      if (!S._firstGen) S._firstGen = true;
+      
+      console.log('[genSelfie] 请求地址:', requestUrl);
+      console.log('[genSelfie] body:', body);
+      
+      r = await fetch(requestUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + key },
+        body: JSON.stringify(body),
+        signal: ctl.signal
       });
     }
+    
     clearTimeout(to);
-    if(!r.ok){const e=await r.text();placeholder.remove();addA(conv,`⚠️ 生图失败 ${r.status}：${e.slice(0,180)}`);return}
-    const data=await r.json();
-    const d0=data.data&&data.data[0];
-    if(d0?.url)imgUrl=d0.url;
-    else if(d0?.b64_json)imgUrl='data:image/png;base64,'+d0.b64_json;
+    
+    if (!r.ok) {
+      const e = await r.text();
+      placeholder.remove();
+      addA(conv, `⚠️ 生图失败 ${r.status}：${e.slice(0, 180)}`);
+      return;
+    }
+    
+    const data = await r.json();
+    const d0 = data.data && data.data[0];
+    if (d0?.url) imgUrl = d0.url;
+    else if (d0?.b64_json) imgUrl = 'data:image/png;base64,' + d0.b64_json;
+    
     placeholder.remove();
-    if(imgUrl)addImgMsg(conv,imgUrl,prompt);
-    else addA(conv,'⚠️ 接口没返回图片');
-  }catch(e){
+    if (imgUrl) addImgMsg(conv, imgUrl, prompt);
+    else addA(conv, '⚠️ 接口没返回图片');
+    
+  } catch (e) {
     console.error('[genSelfie] 错误:', e);
     placeholder.remove();
-    if(e.name === 'AbortError'){
-      addA(conv, '⚠️ 生图超时（超过180秒），图片服务可能较慢，请重试');
+    if (e.name === 'AbortError') {
+      addA(conv, '⚠️ 生图超时（超过180秒），请重试');
     } else {
       addA(conv, '⚠️ 生图出错：' + e.message);
     }
-  }
-  finally{
-    S.streaming=false;
-    const sb=document.getElementById('send-btn');
-    if(sb){sb.disabled=!document.getElementById('chat-in')?.value.trim();sb.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';}
+  } finally {
+    S.streaming = false;
+    const sb = document.getElementById('send-btn');
+    if (sb) {
+      sb.disabled = !document.getElementById('chat-in')?.value.trim();
+      sb.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';
+    }
   }
 }
 // 把图片作为Claude的消息存入对话
