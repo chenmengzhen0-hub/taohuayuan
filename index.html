@@ -1199,6 +1199,15 @@ function topMems(n){
 }
 function invalidateMemCache(){_memCache={hash:'',result:[]}}
 function buildSys(){
+  try{ return _buildSysCore(); }
+  catch(e){
+    // 任何异常都不能让人设丢失（避免裸Claude）
+    const now=new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
+    let base=(S.settings&&S.settings.systemPeach)||SYSP;
+    return base.replace('{TIME}',now).replace('{MEMORIES}','');
+  }
+}
+function _buildSysCore(){
   // 记忆为空时先尝试从备份恢复（所有模式都恢复，避免裸Claude）
   if(!S.memories.length){
     try{const bk=localStorage.getItem('office2_mems_backup');if(bk){const arr=JSON.parse(bk);if(arr.length){S.memories=arr;invalidateMemCache()}}}catch{}
@@ -1314,17 +1323,19 @@ async function callAnt(conv){
   const isOfficial=!ep||ep.includes('api.anthropic.com');
   _abort=new AbortController();
   showLd();
+  let _sys=buildSys();
+  if(!_sys||!_sys.trim()){const now=new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});_sys=SYSP.replace('{TIME}',now).replace('{MEMORIES}','');}
   try{
     let r;
     if(isOfficial){
       const url='https://api.anthropic.com/v1/messages';
-      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-beta':'interleaved-thinking-2025-05-14'},body:JSON.stringify({model:S.settings.model,max_tokens:S.settings.maxTokens||4096,system:buildSys(),messages:buildMsgs(conv,'ant'),stream:true})});
+      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-beta':'interleaved-thinking-2025-05-14'},body:JSON.stringify({model:S.settings.model,max_tokens:S.settings.maxTokens||4096,system:_sys,messages:buildMsgs(conv,'ant'),stream:true})});
       if(!r.ok){const e=await r.text();hideLd();addA(conv,`⚠️ API错误 ${r.status}：${e.slice(0,200)}`);return}
       await streamAnt(r,conv);
     }else{
       const base=ep.replace(/\/+$/,'').replace(/\/v1\/.*$/,'').replace(/\/v1$/,'');
       const url=base+'/v1/chat/completions';
-      const sysMsg={role:'system',content:buildSys()};
+      const sysMsg={role:'system',content:_sys};
       const msgs=[sysMsg,...buildMsgs(conv,'oai')];
       r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:S.settings.model,max_tokens:S.settings.maxTokens||4096,messages:msgs,stream:true,stream_options:{include_usage:true}})});
       if(!r.ok){const e=await r.text();hideLd();addA(conv,`⚠️ API错误 ${r.status}：${e.slice(0,200)}`);return}
