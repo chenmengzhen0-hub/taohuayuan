@@ -1418,7 +1418,7 @@ async function genSelfie(conv,prompt){
       r=await fetch(editsUrl,{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd,signal:ctl.signal});
     }else{
       // 文生图，或走代理（代理暂只支持文生图JSON）
-      const body={prompt,n:1,size:'1024x1024'};
+      const body={prompt,n:1,size:'1024x1024',response_format:'b64_json'};
       if(S.settings.imgModel)body.model=S.settings.imgModel;
       if(isProxy)body.__path='/v1/images/generations';
       r=await fetch(genUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body),signal:ctl.signal});
