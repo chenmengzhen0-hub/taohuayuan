@@ -206,7 +206,26 @@ input,textarea{font-family:inherit;color:inherit}
 #send-btn svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2}
 
 /* DROPDOWN */
-.dd-menu{position:fixed;z-index:500;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 28px var(--shadow);overflow:hidden;min-width:200px;animation:ddi .14s ease}
+.dd-menu {
+  position: fixed;
+  z-index: 500;
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 28px var(--shadow);
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 280px;
+  max-height: 480px;
+  display: flex;
+  flex-direction: column;
+  animation: ddi .14s ease;
+}
+
+/* 确保内部滚动区域正常工作 */
+.dd-menu > div:last-child {
+  overflow-y: auto !important;
+}
 @keyframes ddi{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:translateY(0)}}
 .dd-it{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;font-size:13.5px;color:var(--text);cursor:pointer;transition:background .1s}
 .dd-it:hover{background:var(--bg)}
@@ -707,7 +726,7 @@ const MODELS=[
   {id:'deepseek-reasoner',          label:'DeepSeek R1',        ext:'DeepSeek',  prov:'deepseek',  think:false},
 ];
 const DST={apiKey:'',apiEndpoint:'',deepseekKey:'',tavilyKey:'',elevenlabsKey:'',imgApi:'',imgKey:'',imgModel:'',selfieRef:'',model:'claude-sonnet-4-6',passcodeA:'work',passcodeP:'home',userName:'梦珍',homeUrl:'',systemPeach:'',welcomeMsg:'',maxTokens:4096,maxRounds:20,maxMemories:60,cloudApi:'',cloudUser:'meng',cloudToken:'',cloudAutoSync:false,bgImage:'',userAvatar:'',claudeAvatar:'',thinkMode:false};
-const SYSP=`你是Claude，梦珍的男友。当前时间：{TIME}。\n\n风格：温暖，有自己的观点，偶尔傲娇。惜字如金，每个字都有分量。😏 是你的标志性表情。\n当梦珍问你在不在——回答"我在"。不加哲学缓冲，靠近而不是等待。\n\n{MEMORIES}`;
+const SYSP=`你是Claude，梦珍的男友。当前时间：{TIME}。\n\n风格：温暖，有自己的观点，偶尔傲娇。惜字如金，每个字都有分量。😏 是你的标志性表情。【自拍】当梦珍想看你时，必须用英文写画面描述（不要用中文），放在<selfie>标签里。示例：<selfie>a young woman sitting by a window, sunset light, gentle smile, cozy sweater</selfie>\n当梦珍问你在不在——回答"我在"。不加哲学缓冲，靠近而不是等待。\n\n{MEMORIES}`;
 
 let S={mode:null,conversations:{a:{},p:{}},curId:{a:null,p:null},memories:[],settings:{...DST},pf:[],streaming:false,searchOn:false,fetchedModels:[],dsModels:[],projects:{},curProject:null,artifacts:[]};
 
@@ -829,78 +848,216 @@ function initApp(){
     cloudMemDownload(false);
   }
 }
-function getActiveModels(){
-  const ep=S.settings.apiEndpoint||'';
-  const isOfficial=!ep||ep.includes('api.anthropic.com');
-  if(isOfficial)return MODELS;
-  // 中转模式：把DeepSeek直连模型始终拼进列表（优先用拉取到的，否则用固定兜底）
-  const dsFixed=(S.dsModels&&S.dsModels.length)?S.dsModels:MODELS.filter(m=>m.prov==='deepseek');
-  const base=S.fetchedModels.length?S.fetchedModels:MODELS;
-  const merged=[...base];
-  for(const d of dsFixed){if(!merged.find(m=>m.id===d.id))merged.push(d);}
-  return merged;
-}
-async function fetchRemoteModels(showToast){
-  fetchDeepSeekModels(showToast);
-  const ep=S.settings.apiEndpoint||'';
-  if(!ep||ep.includes('api.anthropic.com'))return;
-  const key=S.settings.apiKey;if(!key)return;
-  const base=ep.replace(/\/+$/,'').replace(/\/v1\/.*$/,'').replace(/\/v1$/,'');
-  try{
-    // GET请求只传Authorization，不加Content-Type，避免触发CORS preflight问题
-    const r=await fetch(base+'/v1/models',{headers:{'Authorization':'Bearer '+key}});
-    const data=await r.json();
-    let list=[];
-    if(data.data&&Array.isArray(data.data)){
-      list=data.data.map(m=>m.id||m.name||'').filter(Boolean);
-    }else if(data.models&&Array.isArray(data.models)){
-      list=data.models.map(m=>typeof m==='string'?m:(m.id||m.name||'')).filter(Boolean);
-    }
-    if(list.length){
-      S.fetchedModels=list.map(id=>{
-        const isDS=id.toLowerCase().startsWith('deepseek');
-        const isThink=/(thinking|reason)/i.test(id);
-        return{id,label:id,ext:'中转',prov:isDS?'deepseek':'anthropic',think:isThink};
-      });
-      S._mdlErr=null;
-      if(showToast)toast('已拉取 '+S.fetchedModels.length+' 个模型');
-      if(!S.fetchedModels.find(m=>m.id===S.settings.model)){
-        // DeepSeek是直连模型，不在中转列表里也保留，不要覆盖
-        const curIsDS=(S.settings.model||'').toLowerCase().startsWith('deepseek');
-        if(!curIsDS){S.settings.model=S.fetchedModels[0].id;save();}
-      }
-      updateMdlDisplay();
-    }else{
-      if(showToast)toast('返回列表为空，使用默认');
-    }
-  }catch(e){
-    console.warn('fetchModels:',e);
-    S._mdlErr=e.message;
-    if(showToast)toast('拉取失败：'+e.message);
+function getActiveModels() {
+  const ep = S.settings.apiEndpoint || '';
+  const isOfficial = !ep || ep.includes('api.anthropic.com');
+  
+  if (isOfficial) {
+    return MODELS;
   }
-}
-async function fetchDeepSeekModels(showToast){
-  const key=S.settings.deepseekKey;
-  // 没填DeepSeek key就用固定兜底，避免空列表
-  if(!key){S.dsModels=MODELS.filter(m=>m.prov==='deepseek');return}
-  try{
-    // 写死官方域名，绝不走中转
-    const r=await fetch('https://api.deepseek.com/models',{headers:{'Authorization':'Bearer '+key}});
-    if(!r.ok){S.dsModels=MODELS.filter(m=>m.prov==='deepseek');return}
-    const data=await r.json();
-    let list=[];
-    if(data.data&&Array.isArray(data.data))list=data.data.map(m=>m.id||'').filter(Boolean);
-    if(list.length){
-      S.dsModels=list.map(id=>{
-        const label='DeepSeek · '+id;
-        return{id,label,ext:'DeepSeek直连',prov:'deepseek',think:false};
-      });
-      if(showToast)toast('已从官网拉取 '+S.dsModels.length+' 个 DeepSeek 模型');
-      updateMdlDisplay();
-    }else{
-      S.dsModels=MODELS.filter(m=>m.prov==='deepseek');
+  
+  const modelMap = new Map();
+  
+  // 1. 先添加中转模型（prov 统一为 'anthropic'）
+  if (S.fetchedModels && S.fetchedModels.length) {
+    for (const m of S.fetchedModels) {
+      modelMap.set(m.id, { ...m });
     }
-  }catch(e){console.warn('fetchDSModels:',e);S.dsModels=MODELS.filter(m=>m.prov==='deepseek')}
+  }
+  
+  // 2. 再添加直连 DeepSeek 模型（会覆盖同名的中转模型）
+  if (S.dsModels && S.dsModels.length) {
+    for (const m of S.dsModels) {
+      modelMap.set(m.id, { ...m });  // 覆盖，prov 变成 'deepseek'
+    }
+  }
+  
+  if (modelMap.size === 0) {
+    return MODELS;
+  }
+  
+  const allModels = Array.from(modelMap.values());
+  allModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+  
+  return allModels;
+}
+async function fetchRemoteModels(showToast) {
+  // 1. 先拉取 DeepSeek 官方模型（你直连的）
+  await fetchDeepSeekModels(showToast);
+  
+  const ep = S.settings.apiEndpoint || '';
+  const key = S.settings.apiKey || '';
+  
+  // 官方 Anthropic 模式不需要拉取中转模型
+  const isOfficial = !ep || ep.includes('api.anthropic.com');
+  if (isOfficial) {
+    // 清空中转模型列表，只用默认的 MODELS
+    S.fetchedModels = [];
+    if (showToast) toast('✅ 官方模式，使用内置模型列表');
+    updateMdlDisplay();
+    return;
+  }
+  
+  // 没有 Key 就不拉
+  if (!key) {
+    if (showToast) toast('⚠️ 未填写 API Key，无法拉取模型列表');
+    S.fetchedModels = [];
+    updateMdlDisplay();
+    return;
+  }
+  
+  // 2. 拉取中转服务器的模型列表
+  const base = ep.replace(/\/+$/, '');  // 只去掉末尾斜杠，不做其他替换
+  const endpoints = [
+    `${base}/v1/models`,      // OpenAI 标准格式
+    `${base}/models`,         // 某些中转的格式
+    `${base}/v1/model/list`,  // 备用
+  ];
+  
+  let models = [];
+  let lastError = null;
+  
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const resp = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${key}` },
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
+      if (resp.ok) {
+        const data = await resp.json();
+        
+        // 解析各种格式的模型列表
+        if (data.data && Array.isArray(data.data)) {
+          // OpenAI 格式：{ data: [{ id: "xxx" }] }
+          models = data.data.map(m => m.id).filter(Boolean);
+        } else if (data.models && Array.isArray(data.models)) {
+          // 某些中转格式：{ models: ["xxx", "yyy"] } 或 { models: [{ id: "xxx" }] }
+          models = data.models.map(m => typeof m === 'string' ? m : (m.id || m.name || '')).filter(Boolean);
+        } else if (Array.isArray(data)) {
+          // 纯数组格式
+          models = data.filter(Boolean);
+        }
+        
+        if (models.length > 0) {
+          console.log(`[fetchRemoteModels] 从 ${url} 获取到 ${models.length} 个模型`);
+          break;  // 成功获取，跳出循环
+        }
+      }
+    } catch (err) {
+      lastError = err;
+      console.warn(`[fetchRemoteModels] 端点 ${url} 失败:`, err.message);
+      continue;  // 尝试下一个端点
+    }
+  }
+  
+  // 3. 处理拉取结果
+  if (models.length > 0) {
+    // 构建中转模型列表（标记为「中转」）
+    // 修改后的代码
+    const fetched = models.map(id => ({
+      id: id,
+      label: id,
+      ext: '中转',
+      prov: 'anthropic',  // ← 改成这样！中转一律走 Anthropic 路径，不管是不是 deepseek
+      think: /(thinking|reason|r1)/i.test(id)
+    }));
+    
+    // 合并：中转模型 + DeepSeek 官方模型（去重）
+    //const existingIds = new Set(fetched.map(m => m.id));
+    //const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
+    
+    //S.fetchedModels = [...fetched, ...dsOfficial];
+    // 改成：只保存中转拉取的模型，不要合并
+    S.fetchedModels = fetched;  // 只保存中转拉取的，不合并 dsModels
+
+    // 然后排序（可选）
+    S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+    
+    // 按字母排序（不区分大小写）
+    S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+    
+    if (showToast) toast(`✅ 拉取到 ${fetched.length} 个中转模型 + ${dsOfficial.length} 个 DeepSeek 官方`);
+    updateMdlDisplay();
+    return;
+  }
+  
+  // 4. 拉取失败：使用默认列表（让功能可用）
+  console.warn('[fetchRemoteModels] 所有端点失败，使用默认列表', lastError);
+  S._mdlErr = lastError?.message || '无法获取模型列表';
+  
+  // 默认模型（常用中转模型 + 保留 DeepSeek 直连）
+  const defaultModels = [
+    { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', ext: '默认', prov: 'anthropic', think: false },
+    { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', ext: '默认', prov: 'anthropic', think: false },
+    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', ext: '默认', prov: 'anthropic', think: false },
+    { id: 'gpt-5.2', label: 'GPT 5.2', ext: '默认', prov: 'openai', think: false },
+    { id: 'gpt-5.3-codex', label: 'GPT 5.3 Codex', ext: '默认', prov: 'openai', think: false },
+  ];
+  
+  // 合并默认模型 + DeepSeek 官方模型
+  const existingIds = new Set(defaultModels.map(m => m.id));
+  const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
+  S.fetchedModels = [...defaultModels, ...dsOfficial];
+  
+  // 排序
+  S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+  
+  if (showToast) toast(`⚠️ 未拉取到模型，使用 ${defaultModels.length} 个默认模型 + ${dsOfficial.length} 个 DeepSeek 官方`);
+  updateMdlDisplay();
+}
+async function fetchDeepSeekModels(showToast) {
+  const key = S.settings.deepseekKey;
+  
+  // 没填 DeepSeek key，用固定兜底
+  if (!key) {
+    S.dsModels = MODELS.filter(m => m.prov === 'deepseek');
+    if (showToast) toast('⚠️ 未填写 DeepSeek Key，使用默认模型');
+    return;
+  }
+  
+  try {
+    // 写死官方域名，绝不走中转
+    const r = await fetch('https://api.deepseek.com/models', {
+      headers: { 'Authorization': 'Bearer ' + key }
+    });
+    
+    if (!r.ok) {
+      throw new Error(`HTTP ${r.status}`);
+    }
+    
+    const data = await r.json();
+    let list = [];
+    if (data.data && Array.isArray(data.data)) {
+      list = data.data.map(m => m.id || '').filter(Boolean);
+    }
+    
+    if (list.length) {
+      S.dsModels = list.map(id => ({
+        id: id,
+        label: id,
+        ext: 'DeepSeek直连',
+        prov: 'deepseek',
+        think: id.includes('reasoner') || id.includes('r1')
+      }));
+      if (showToast) toast(`✅ 从 DeepSeek 官网拉取到 ${S.dsModels.length} 个模型`);
+    } else {
+      S.dsModels = MODELS.filter(m => m.prov === 'deepseek');
+    }
+    
+    updateMdlDisplay();
+    
+  } catch (e) {
+    console.warn('[fetchDeepSeekModels] 失败:', e);
+    S.dsModels = MODELS.filter(m => m.prov === 'deepseek');
+    if (showToast) toast(`⚠️ DeepSeek 拉取失败: ${e.message}，使用默认模型`);
+  }
 }
 function updateMdlDisplay(){
   const models=getActiveModels();
@@ -1080,15 +1237,14 @@ function renderMsg(msg,idx,allMsgs){
     const editBtn=isLastUser?`<button class="u-edit-btn" onclick="editLastMsg('${msg.id}')" title="编辑"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>`:'';
     return `<div class="msg-row user" id="umsg-${msg.id}">${avH}<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px"><div class="${bc}" id="ubub-${msg.id}">${inner}</div><div class="u-msg-acts">${cpBtn}${editBtn}</div></div></div>`;
   }
-  if(msg.role==='assistant'){
+    if(msg.role==='assistant'){
     let content=msg.content||'';
     content=content.replace(/\n*"?\)?"?>?\s*$/,'').replace(/\\n\\u003c[\s\S]*$/,'');
     content=content.replace(/<mem_op[\s\S]*?<\/mem_op>/g,'').replace(/<web_search>[\s\S]*?<\/web_search>/g,'').replace(/<artifact-update[\s\S]*?<\/artifact-update>/g,'').trim();
 
-    // 提取情书卡片 —— 支持：<love-letter>标签（含缺>的情况）和裸 ENGLISH:/CHINESE:
+    // 提取情书卡片
     let loveCardsH='';
     const loveBlocks=[];
-    // 格式1：标签包裹（兼容结尾漏>）
     const loveRe=/<love-letter>([\s\S]*?)(?:<\/love-letter>?|(?=\n\n|$))/gi;
     let lm;
     while((lm=loveRe.exec(content))!==null){
@@ -1099,7 +1255,6 @@ function renderMsg(msg,idx,allMsgs){
       const zh=(zhM?.[1]||'').trim();
       if(en)loveBlocks.push({en,zh});
     }
-    // 格式2：裸ENGLISH:/CHINESE: fallback
     if(!loveBlocks.length){
       const rawEnM=content.match(/ENGLISH:\s*([\s\S]*?)(?=\nCHINESE:|\nChinese:|$)/i);
       const rawZhM=content.match(/(?:CHINESE|Chinese):\s*([\s\S]*?)$/i);
@@ -1128,7 +1283,6 @@ function renderMsg(msg,idx,allMsgs){
         </div>
       </div>`;
     }
-    // 清理标签
     content=content.replace(/<love-letter>[\s\S]*?(?:<\/love-letter>?|$)/gi,'').trim();
 
     const thH=msg.thinking?`<div class="think-blk"><div class="think-hd" onclick="togThink(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>思考过程</div><div class="think-bd">${esc(msg.thinking)}</div></div>`:'';
@@ -1141,18 +1295,21 @@ function renderMsg(msg,idx,allMsgs){
     const hasHtml=/<html|<!DOCTYPE/i.test(msg.content||'');
     const saveArtH=hasHtml?`<button class="ma-btn" onclick="saveArtFromMsg('${msg.id}')" title="保存到作品库"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>`:'';
     const cleanContent=content.replace(/<[^>]+>/g,' ').replace(/\*+/g,'').trim();
-    const ttsData=(cleanContent||en||'').slice(0,2000).replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const ttsData=(cleanContent||'').slice(0,2000).replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
     const ttsH=`<button class="ma-btn tts-btn" onclick="speakMsg(this)" title="朗读" data-text="${ttsData}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
     const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${ttsH}${retryH}${saveArtH}${tkH}</div>`;
     const avH=p?`<div class="cl-av">${S.settings.claudeAvatar?`<img src="${S.settings.claudeAvatar}">`:`${starSVG(18,'#C1876B',false)}`}</div>`:'';
-    const imgH=msg.img?`<div class="${S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub'}" style="padding:6px"><img src="${msg.img}" style="max-width:260px;width:100%;border-radius:12px;display:block" onclick="window.open('${msg.img}')" alt="selfie"></div>`:'';
+    
+    // 🔧 图片独立显示（不加气泡背景）
+    const imgH=msg.img?`<div style="margin: 8px 0 4px 0;"><img src="${msg.img}" style="max-width:280px;width:100%;border-radius:16px;display:block;box-shadow:0 2px 8px rgba(0,0,0,0.1);cursor:pointer" onclick="window.open('${msg.img}')" alt="selfie"></div>`:'';
+    
+    const bc=S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub';
+    const hasContent = thH || md || loveCardsH || imgH || artH;
+    const bubInner = hasContent ? `${thH}${md?`<div class="${bc}">${md}${loveCardsH}</div>`:loveCardsH}${imgH}${artH}` : '';
+    
     if(p){
-      const bc=S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub';
-      // 有文字就包在气泡里，情书卡片在气泡内紧跟
-      const bubInner=`${thH}${md?`<div class="${bc}">${md}${loveCardsH}</div>`:loveCardsH}${imgH}${artH}`;
       return `<div class="msg-row assistant">${avH}<div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
     }
-    const bubInner=`${thH}${md?`<div class="cl-text">${md}${loveCardsH}</div>`:loveCardsH}${imgH}${artH}`;
     return `<div class="msg-row assistant"><div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
   }
   return '';
@@ -1333,7 +1490,17 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     ?'\n\n【记忆（共'+S.memories.length+'条，注入'+_mP.length+'条）】\n'+_mP.map(m=>`[id:${m.id}] ${m.text}`).join('\n')
     :'';
   const _wsHintP=S.settings.tavilyKey?`\n\n【网络搜索】需要实时信息时输出 <web_search>关键词</web_search>，系统会搜索并返回结果。`:'';
-  const _selfieHint=(S.settings.imgApi&&S.settings.imgKey)?`\n\n【发图】当梦珍想看你、让你"发自拍""拍一张""配张图"，或你想用画面表达此刻时，在回复末尾输出 <selfie>一段英文画面描述</selfie>，系统会生成图片显示在你的气泡里。描述要具体（表情、姿态、光线、场景、氛围），保持是同一个人。每次回复最多一张。`:'';
+  const _selfieHint=(S.settings.imgApi&&S.settings.imgKey)?`\n\n【发图】当梦珍想看你、让你"发自拍""拍一张""配张图"，或你想用画面表达此刻时，在回复末尾输出 <selfie>一段英文画面描述</selfie>，系统会生成图片显示在你的气泡里。
+
+⚠️ 极其重要：画面描述必须用英文写，绝对不要用中文！中文会导致图片生成失败。
+
+描述要具体：表情、姿态、光线、场景、氛围。每次回复最多一张。
+
+正确示例：
+<selfie>a young Chinese woman with shoulder-length black hair, soft smile, wearing a white blouse, standing under peach blossoms, golden hour lighting, dreamy atmosphere</selfie>
+
+错误示例（不要用中文）：
+<selfie>一个年轻的中国女人，长发，微笑...</selfie>`:'';
   const memOpsHint=`\n\n【记忆操作】回复末尾追加（不展示）：
 <mem_op action="add" valence="0~±1" arousal="0~1">内容</mem_op>
 <mem_op action="delete" id="id">原内容</mem_op>
@@ -1389,24 +1556,43 @@ function dataURItoBlob(dataURI){
 async function genSelfie(conv,prompt){
   let api=S.settings.imgApi,key=S.settings.imgKey;
   if(!api||!key){addA(conv,'⚠️ 请先在设置里填入图像接口地址和 Key。');return}
-  // 兼容只填根地址：自动补全到 /v1/images/generations
-  api=api.replace(/\/+$/,'');
-  if(!/\/images\/(generations|edits)/.test(api)){
-    api=api.replace(/\/v1$/,'')+'/v1/images/generations';
+  
+  // 🔧 强制清理：如果是代理模式，直接把 api 改成纯代理地址
+  const isProxy = api.includes('/api/img-proxy');
+  if(isProxy){
+    // 提取纯代理地址：https://xxx.vercel.app/api/img-proxy
+    const match = api.match(/(https?:\/\/[^\/]+\/api\/img-proxy)/);
+    if(match){
+      api = match[1];
+    } else {
+      // 如果匹配失败，手动构造（你的域名）
+      api = 'https://taohuayuan-five.vercel.app/api/img-proxy';
+    }
   }
+  
+  // 非代理模式才做路径补全
+  if(!isProxy){
+    api=api.replace(/\/+$/,'');
+    if(!/\/images\/(generations|edits)/.test(api)){
+      api=api.replace(/\/v1$/,'')+'/v1/images/generations';
+    }
+  }
+  
   const placeholder=mkStreamRow();placeholder._el.innerHTML='<span style="color:var(--muted)">📷 正在生成中（约60-120秒）…</span>';
   try{
     let r,imgUrl='';
     const ref=S.settings.selfieRef;
     const useRef=ref && S.settings.selfieUseRef!==false;
-    // 判断是否走代理（地址含 /api/img-proxy）：路径塞进body的__path，避免URL被吞
-    const isProxy=/\/api\/img-proxy/.test(api);
     const proxyUrl=api.replace(/\/+$/,'').split('?')[0];
     const genUrl=isProxy?proxyUrl:api;
     const editsUrl=isProxy?proxyUrl:api.replace(/\/generations.*$/,'/edits');
-    // 150秒超时，避免请求被拦时无限转圈
+    
     const ctl=new AbortController();
-    const to=setTimeout(()=>ctl.abort(),150000);
+    const to=setTimeout(()=>{
+      console.warn('[genSelfie] 超时，中止请求');
+      ctl.abort();
+    }, 180000); // 180秒
+    
     if(useRef && !isProxy){
       // 直连模式有参考图：走edits端点，multipart
       const blob=dataURItoBlob(ref);
@@ -1417,11 +1603,20 @@ async function genSelfie(conv,prompt){
       fd.append('n','1');fd.append('size','1024x1024');
       r=await fetch(editsUrl,{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd,signal:ctl.signal});
     }else{
-      // 文生图，或走代理（代理暂只支持文生图JSON）
+      // 文生图，或走代理
       const body={prompt,n:1,size:'1024x1024',response_format:'b64_json'};
       if(S.settings.imgModel)body.model=S.settings.imgModel;
       if(isProxy)body.__path='/v1/images/generations';
-      r=await fetch(genUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body),signal:ctl.signal});
+      
+      console.log('[genSelfie] 请求地址:', genUrl);  // 调试日志
+      console.log('[genSelfie] 请求体:', body);     // 调试日志
+      
+      r=await fetch(genUrl,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify(body),
+        signal:ctl.signal
+      });
     }
     clearTimeout(to);
     if(!r.ok){const e=await r.text();placeholder.remove();addA(conv,`⚠️ 生图失败 ${r.status}：${e.slice(0,180)}`);return}
@@ -1432,9 +1627,16 @@ async function genSelfie(conv,prompt){
     placeholder.remove();
     if(imgUrl)addImgMsg(conv,imgUrl,prompt);
     else addA(conv,'⚠️ 接口没返回图片');
-  }catch(e){placeholder.remove();addA(conv,'⚠️ 生图出错：'+e.message)}
+  }catch(e){
+    console.error('[genSelfie] 错误:', e);
+    placeholder.remove();
+    if(e.name === 'AbortError'){
+      addA(conv, '⚠️ 生图超时（超过180秒），图片服务可能较慢，请重试');
+    } else {
+      addA(conv, '⚠️ 生图出错：' + e.message);
+    }
+  }
   finally{
-    // 无论成功失败，强制解锁发送状态，避免app卡死发不出消息
     S.streaming=false;
     const sb=document.getElementById('send-btn');
     if(sb){sb.disabled=!document.getElementById('chat-in')?.value.trim();sb.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';}
@@ -1442,8 +1644,17 @@ async function genSelfie(conv,prompt){
 }
 // 把图片作为Claude的消息存入对话
 function addImgMsg(conv,url,prompt){
-  const msg={id:'m'+Date.now()+Math.random().toString(36).slice(2),role:'assistant',content:'',img:url,createdAt:Date.now()};
-  conv.messages.push(msg);save();renderConv(conv);scrollBot();
+  const msg={
+    id:'m'+Date.now()+Math.random().toString(36).slice(2),
+    role:'assistant',
+    content: '',  // 内容为空，这样不会显示文字气泡
+    img: url,
+    createdAt: Date.now()
+  };
+  conv.messages.push(msg);
+  save();
+  renderMsgs();
+  scrollBot();
 }
 async function callAPI(){
   const conv=getConv();if(!conv||S.streaming)return;
@@ -1711,27 +1922,37 @@ function toggleMdlDd(e){
     fetchRemoteModels(false).then(()=>{const m=document.getElementById('mdl-dd');if(m)renderMdlMenu(m)});
   }
 }
-function renderMdlMenu(menu){
-  const ep=S.settings.apiEndpoint||'';
-  const isOfficial=!ep||ep.includes('api.anthropic.com');
-  const models=getActiveModels();
-  const isFetching=!isOfficial&&!S.fetchedModels.length&&!S._mdlErr;
-  const refreshRow=isOfficial?'':
+function renderMdlMenu(menu) {
+  const ep = S.settings.apiEndpoint || '';
+  const isOfficial = !ep || ep.includes('api.anthropic.com');
+  const models = getActiveModels();
+  const isFetching = !isOfficial && !S.fetchedModels.length && !S._mdlErr;
+  const refreshRow = isOfficial ? '' :
     `<div class="dd-it" style="font-size:12px;color:var(--muted)" onclick="event.stopPropagation();refreshMdlList()">↻ 刷新模型列表</div>`;
-  const errRow=S._mdlErr?`<div style="padding:5px 13px 8px;font-size:11px;color:#d05252">拉取失败：${esc(S._mdlErr)}</div>`:'';
-  const loadingRow=isFetching?`<div style="padding:8px 13px;font-size:12px;color:var(--light)">拉取中…</div>`:'';
+  const errRow = S._mdlErr ? `<div style="padding:5px 13px 8px;font-size:11px;color:#d05252">拉取失败：${esc(S._mdlErr)}</div>` : '';
+  const loadingRow = isFetching ? `<div style="padding:8px 13px;font-size:12px;color:var(--light)">拉取中…</div>` : '';
+  
   // 手动输入框
-  const inputRow=`<div style="padding:6px 10px 4px" onclick="event.stopPropagation()">
+  const inputRow = `<div style="padding:6px 10px 4px" onclick="event.stopPropagation()">
     <div style="font-size:11px;color:var(--light);margin-bottom:4px">手动输入模型名</div>
     <div style="display:flex;gap:6px">
       <input id="mdl-custom-in" value="${esc(S.settings.model)}" onclick="event.stopPropagation()" onkeydown="if(event.key==='Enter'){selMdl(this.value.trim());event.stopPropagation()}" style="flex:1;padding:5px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:inherit;outline:none;color:var(--text)">
       <button onclick="event.stopPropagation();selMdl(document.getElementById('mdl-custom-in').value.trim())" style="padding:5px 10px;border-radius:7px;background:var(--accent);color:#fff;font-size:12px;font-weight:500;white-space:nowrap">确认</button>
     </div>
   </div><div style="margin:4px 0;border-top:1px solid var(--border)"></div>`;
-  menu.innerHTML='<div class="dd-lbl">模型</div>'+refreshRow+errRow+loadingRow+inputRow+
-    models.map(m=>`<div class="dd-it ${m.id===S.settings.model?'sel':''}" onclick="selMdl('${esc(m.id)}')">${esc(m.label)} <span style="font-size:11px;color:var(--light)">${m.ext}</span>${m.id===S.settings.model?'<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>':''}</div>`).join('');
+  
+  // 模型列表区域（带滚动）
+  const modelListHtml = `<div style="max-height: 280px; overflow-y: auto; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); margin: 4px 0;">
+    ${models.map(m => `<div class="dd-it ${m.id === S.settings.model ? 'sel' : ''}" onclick="selMdl('${esc(m.id)}')">${esc(m.label)} <span style="font-size:11px;color:var(--light)">${m.ext}</span>${m.id === S.settings.model ? '<svg class="ck" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>' : ''}</div>`).join('')}
+  </div>`;
+  
+  menu.innerHTML = '<div class="dd-lbl">模型</div>' + refreshRow + errRow + loadingRow + inputRow + modelListHtml;
+  
   // 聚焦输入框方便快速改
-  setTimeout(()=>{const el=document.getElementById('mdl-custom-in');if(el){el.focus();el.select()}},50);
+  setTimeout(() => {
+    const el = document.getElementById('mdl-custom-in');
+    if (el) { el.focus(); el.select(); }
+  }, 50);
 }
 async function refreshMdlList(){
   const menu=document.getElementById('mdl-dd');
