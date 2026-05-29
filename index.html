@@ -1035,7 +1035,7 @@ function renderMsg(msg,idx,allMsgs){
       }
     }
     for(const {en,zh} of loveBlocks){
-      if(en&&!_loveLetters.some(l=>l.en===en)){
+      if(en&&!isLoveDeleted(en)&&!_loveLetters.some(l=>l.en===en)){
         _loveLetters.push({id:'ll'+Date.now()+Math.random().toString(36).slice(2),en,zh,createdAt:msg.createdAt||Date.now(),msgId:msg.id});
         saveLoveLetters();
       }
@@ -1639,8 +1639,9 @@ async function cloudMemDownload(showMsg){
     if(!r.ok)throw new Error('HTTP '+r.status);
     const d=await r.json();
     if(!d.found){setCloudStatus('云端暂无数据');if(showMsg)toast('云端暂无数据');return{ok:true,found:false}}
-    const st=d.data?.state||d.data;
-    if(!st){setCloudStatus('数据格式异常');return{ok:false}}
+    let st=d.data?.state||d.data;
+    if(typeof st==='string'){try{st=JSON.parse(st)}catch{}}
+    if(!st||typeof st!=='object'){setCloudStatus('数据格式异常');return{ok:false}}
     // 恢复全量状态，保留本地敏感字段
     const keep={apiKey:S.settings.apiKey,deepseekKey:S.settings.deepseekKey,
       tavilyKey:S.settings.tavilyKey,elevenlabsKey:S.settings.elevenlabsKey,
@@ -2597,9 +2598,16 @@ function renderLoveList(){
 
 function deleteLetter(id){
   if(!confirm('删除这封情书？'))return;
+  const gone=_loveLetters.find(l=>(l.id||('ll'+l.createdAt))===id);
+  if(gone&&gone.en)addDeletedLove(gone.en);
   _loveLetters=_loveLetters.filter(l=>(l.id||('ll'+l.createdAt))!==id);
   saveLoveLetters();renderLoveList();
 }
+let _deletedLove=[];
+try{_deletedLove=JSON.parse(localStorage.getItem('love_deleted')||'[]')}catch{_deletedLove=[]}
+function loveFp(en){return (en||'').trim().slice(0,120)}
+function addDeletedLove(en){const fp=loveFp(en);if(fp&&!_deletedLove.includes(fp)){_deletedLove.push(fp);try{localStorage.setItem('love_deleted',JSON.stringify(_deletedLove))}catch{}}}
+function isLoveDeleted(en){return _deletedLove.includes(loveFp(en))}
 
 async function genLoveLetter(){
   const key=S.settings.apiKey;
