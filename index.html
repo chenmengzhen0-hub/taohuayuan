@@ -1199,6 +1199,10 @@ function topMems(n){
 }
 function invalidateMemCache(){_memCache={hash:'',result:[]}}
 function buildSys(){
+  // 记忆为空时先尝试从备份恢复（所有模式都恢复，避免裸Claude）
+  if(!S.memories.length){
+    try{const bk=localStorage.getItem('office2_mems_backup');if(bk){const arr=JSON.parse(bk);if(arr.length){S.memories=arr;invalidateMemCache()}}}catch{}
+  }
   const now=new Date().toLocaleString('zh-CN',{timeZone:'Asia/Shanghai'});
   const searchHint=S.searchOn?'\n\n[搜索模式已开启] 用户希望你搜索/查询信息。请尽你所知提供详细、准确的回答。如果涉及实时信息你无法确认，请如实说明。':'';
   const curModel=S.settings.model||'';
@@ -2165,10 +2169,18 @@ function openArtById(id){
 function delArt(id){if(!confirm('删除这个作品？'))return;delete S.artifacts[id];save();renderArtsList();}
 function downloadArt(id){
   const a=S.artifacts?.[id];if(!a)return;
-  const el=document.createElement('a');
-  el.href='data:text/html;charset=utf-8,'+encodeURIComponent(a.html);
-  el.download=(a.title||'作品')+'.html';
-  document.body.appendChild(el);el.click();document.body.removeChild(el);
+  const fname=(a.title||'作品')+'.html';
+  try{
+    const blob=new Blob([a.html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const el=document.createElement('a');
+    el.href=url;el.download=fname;el.rel='noopener';
+    document.body.appendChild(el);el.click();
+    setTimeout(()=>{document.body.removeChild(el);URL.revokeObjectURL(url)},1000);
+  }catch(e){
+    // Safari兜底：新窗口打开，用户长按/分享保存
+    try{const w=window.open();w.document.write(a.html);w.document.close()}catch{toast('下载失败，请换浏览器试试')}
+  }
 }
 function openMem(){renderMemList();document.getElementById('mem-dw').classList.add('on');closeSb()}
 function closeMem(){document.getElementById('mem-dw').classList.remove('on')}
@@ -2528,7 +2540,7 @@ async function speakText(text){
     const r=await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${ELEVEN_VOICE}/stream`,{
       method:'POST',
       headers:{'Content-Type':'application/json','xi-api-key':key},
-      body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:.45,similarity_boost:.82,style:.15,use_speaker_boost:true}})
+      body:JSON.stringify({text:clean,model_id:'eleven_multilingual_v2',voice_settings:{stability:.45,similarity_boost:.82,style:.15,use_speaker_boost:true,speed:.88}})
     });
     if(!r.ok){const e=await r.text();stopTTS();toast('TTS失败：'+r.status);return}
     const blob=await r.blob();
