@@ -1,6 +1,8 @@
 {
   "rewrites": [
-    { "source": "/", "destination": "/index.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/api/models", "destination": "/api/models.js" },
+    { "source": "/api/img-proxy", "destination": "/api/img-proxy.js" }
   ],
   "headers": [
     {
@@ -9,11 +11,22 @@
         { "key": "Cache-Control", "value": "no-cache" },
         { "key": "Service-Worker-Allowed", "value": "/" }
       ]
+    },
+    {
+      "source": "/api/(.*)",
+      "headers": [
+        { "key": "Access-Control-Allow-Origin", "value": "*" },
+        { "key": "Access-Control-Allow-Methods", "value": "GET, POST, OPTIONS" },
+        { "key": "Access-Control-Allow-Headers", "value": "Content-Type, Authorization" }
+      ]
     }
   ],
   "functions": {
     "api/img-proxy.js": {
       "maxDuration": 300
+    },
+    "api/models.js": {
+      "maxDuration": 10
     }
   }
 }
