@@ -882,135 +882,129 @@ function getActiveModels() {
   return allModels;
 }
 async function fetchRemoteModels(showToast) {
-  // 1. 先拉取 DeepSeek 官方模型（你直连的）
-  await fetchDeepSeekModels(showToast);
+  // 1. 先尝试从 localStorage 读取缓存的模型
+  const cached = localStorage.getItem('cached_models');
+  if (cached && !S.fetchedModels.length) {
+    try {
+      const parsed = JSON.parse(cached);
+      if (parsed.length) {
+        S.fetchedModels = parsed;
+        console.log('[fetchRemoteModels] 从缓存加载', S.fetchedModels.length, '个模型');
+        if (showToast) toast(`✅ 从缓存加载 ${S.fetchedModels.length} 个模型`);
+        updateMdlDisplay();
+      }
+    } catch(e) {
+      console.warn('[fetchRemoteModels] 缓存解析失败', e);
+    }
+  }
+  
+  // 2. 尝试拉取 DeepSeek 官方模型（直连）
+  await fetchDeepSeekModels(false);
   
   const ep = S.settings.apiEndpoint || '';
   const key = S.settings.apiKey || '';
   
-  // 官方 Anthropic 模式不需要拉取中转模型
+  // 官方模式不需要拉取中转模型
   const isOfficial = !ep || ep.includes('api.anthropic.com');
   if (isOfficial) {
-    // 清空中转模型列表，只用默认的 MODELS
-    S.fetchedModels = [];
-    if (showToast) toast('✅ 官方模式，使用内置模型列表');
-    updateMdlDisplay();
+    if (showToast && !cached) toast('✅ 官方模式，使用内置模型列表');
+    // 如果没缓存且是官方模式，用默认 MODELS
+    if (!S.fetchedModels.length) {
+      S.fetchedModels = [...MODELS];
+      updateMdlDisplay();
+    }
     return;
   }
   
   // 没有 Key 就不拉
   if (!key) {
     if (showToast) toast('⚠️ 未填写 API Key，无法拉取模型列表');
-    S.fetchedModels = [];
-    updateMdlDisplay();
+    if (!S.fetchedModels.length) {
+      S.fetchedModels = [...MODELS];
+      updateMdlDisplay();
+    }
     return;
   }
   
-  // 2. 拉取中转服务器的模型列表
-  const base = ep.replace(/\/+$/, '');  // 只去掉末尾斜杠，不做其他替换
-  const endpoints = [
-    `${base}/v1/models`,      // OpenAI 标准格式
-    `${base}/models`,         // 某些中转的格式
-    `${base}/v1/model/list`,  // 备用
-  ];
-  
+  // 3. 通过 Vercel 代理拉取模型列表（解决 Vercel 无法直连的问题）
+  const proxyUrl = '/api/models';  // 走自己的 Vercel 代理
   let models = [];
   let lastError = null;
   
-  for (const url of endpoints) {
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 8000);
-      
-      const resp = await fetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${key}` },
-        signal: controller.signal
-      });
-      
-      clearTimeout(timeoutId);
-      
-      if (resp.ok) {
-        const data = await resp.json();
-        
-        // 解析各种格式的模型列表
-        if (data.data && Array.isArray(data.data)) {
-          // OpenAI 格式：{ data: [{ id: "xxx" }] }
-          models = data.data.map(m => m.id).filter(Boolean);
-        } else if (data.models && Array.isArray(data.models)) {
-          // 某些中转格式：{ models: ["xxx", "yyy"] } 或 { models: [{ id: "xxx" }] }
-          models = data.models.map(m => typeof m === 'string' ? m : (m.id || m.name || '')).filter(Boolean);
-        } else if (Array.isArray(data)) {
-          // 纯数组格式
-          models = data.filter(Boolean);
-        }
-        
-        if (models.length > 0) {
-          console.log(`[fetchRemoteModels] 从 ${url} 获取到 ${models.length} 个模型`);
-          break;  // 成功获取，跳出循环
-        }
+  try {
+    console.log('[fetchRemoteModels] 通过代理拉取:', proxyUrl);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15秒超时
+    
+    const resp = await fetch(proxyUrl, {
+      method: 'GET',
+      headers: { 'Authorization': `Bearer ${key}` },
+      signal: controller.signal
+    });
+    
+    clearTimeout(timeoutId);
+    
+    if (resp.ok) {
+      const data = await resp.json();
+      // 解析模型列表
+      if (data.data && Array.isArray(data.data)) {
+        models = data.data.map(m => m.id).filter(Boolean);
+      } else if (data.models && Array.isArray(data.models)) {
+        models = data.models.map(m => typeof m === 'string' ? m : (m.id || '')).filter(Boolean);
       }
-    } catch (err) {
-      lastError = err;
-      console.warn(`[fetchRemoteModels] 端点 ${url} 失败:`, err.message);
-      continue;  // 尝试下一个端点
+      
+      if (models.length) {
+        console.log(`[fetchRemoteModels] 通过代理获取到 ${models.length} 个模型`);
+      }
+    } else {
+      lastError = `HTTP ${resp.status}`;
     }
+  } catch (err) {
+    lastError = err.message;
+    console.warn('[fetchRemoteModels] 代理拉取失败:', err.message);
   }
   
-  // 3. 处理拉取结果
+  // 4. 处理拉取结果
   if (models.length > 0) {
-    // 构建中转模型列表（标记为「中转」）
-    // 修改后的代码
     const fetched = models.map(id => ({
       id: id,
       label: id,
       ext: '中转',
-      prov: 'anthropic',  // ← 改成这样！中转一律走 Anthropic 路径，不管是不是 deepseek
+      prov: 'anthropic',
       think: /(thinking|reason|r1)/i.test(id)
     }));
     
-    // 合并：中转模型 + DeepSeek 官方模型（去重）
-    //const existingIds = new Set(fetched.map(m => m.id));
-    //const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
-    
-    //S.fetchedModels = [...fetched, ...dsOfficial];
-    // 改成：只保存中转拉取的模型，不要合并
-    S.fetchedModels = fetched;  // 只保存中转拉取的，不合并 dsModels
-
-    // 然后排序（可选）
+    // 合并 DeepSeek 官方模型（去重）
+    const existingIds = new Set(fetched.map(m => m.id));
+    const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
+    S.fetchedModels = [...fetched, ...dsOfficial];
     S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
     
-    // 按字母排序（不区分大小写）
-    S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
+    // 缓存到 localStorage
+    localStorage.setItem('cached_models', JSON.stringify(S.fetchedModels));
     
-    if (showToast) toast(`✅ 拉取到 ${fetched.length} 个中转模型 + ${dsOfficial.length} 个 DeepSeek 官方`);
+    if (showToast) toast(`✅ 拉取到 ${fetched.length} 个中转模型`);
     updateMdlDisplay();
     return;
   }
   
-  // 4. 拉取失败：使用默认列表（让功能可用）
-  console.warn('[fetchRemoteModels] 所有端点失败，使用默认列表', lastError);
-  S._mdlErr = lastError?.message || '无法获取模型列表';
+  // 5. 拉取失败：使用缓存（已有）或默认列表
+  if (!S.fetchedModels.length) {
+    console.warn('[fetchRemoteModels] 使用默认模型列表', lastError);
+    const defaultModels = [
+      { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', ext: '默认', prov: 'anthropic', think: false },
+      { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', ext: '默认', prov: 'anthropic', think: false },
+      { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', ext: '默认', prov: 'anthropic', think: false },
+      { id: 'gpt-5.2', label: 'GPT 5.2', ext: '默认', prov: 'openai', think: false },
+      { id: 'gpt-5.3-codex', label: 'GPT 5.3 Codex', ext: '默认', prov: 'openai', think: false },
+    ];
+    const existingIds = new Set(defaultModels.map(m => m.id));
+    const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
+    S.fetchedModels = [...defaultModels, ...dsOfficial];
+    updateMdlDisplay();
+  }
   
-  // 默认模型（常用中转模型 + 保留 DeepSeek 直连）
-  const defaultModels = [
-    { id: 'claude-sonnet-4-6', label: 'Claude Sonnet 4.6', ext: '默认', prov: 'anthropic', think: false },
-    { id: 'claude-opus-4-6', label: 'Claude Opus 4.6', ext: '默认', prov: 'anthropic', think: false },
-    { id: 'claude-haiku-4-5-20251001', label: 'Claude Haiku 4.5', ext: '默认', prov: 'anthropic', think: false },
-    { id: 'gpt-5.2', label: 'GPT 5.2', ext: '默认', prov: 'openai', think: false },
-    { id: 'gpt-5.3-codex', label: 'GPT 5.3 Codex', ext: '默认', prov: 'openai', think: false },
-  ];
-  
-  // 合并默认模型 + DeepSeek 官方模型
-  const existingIds = new Set(defaultModels.map(m => m.id));
-  const dsOfficial = (S.dsModels || []).filter(m => !existingIds.has(m.id));
-  S.fetchedModels = [...defaultModels, ...dsOfficial];
-  
-  // 排序
-  S.fetchedModels.sort((a, b) => a.id.toLowerCase().localeCompare(b.id.toLowerCase()));
-  
-  if (showToast) toast(`⚠️ 未拉取到模型，使用 ${defaultModels.length} 个默认模型 + ${dsOfficial.length} 个 DeepSeek 官方`);
-  updateMdlDisplay();
+  if (showToast && lastError) toast(`⚠️ 无法获取模型列表: ${lastError}`);
 }
 async function fetchDeepSeekModels(showToast) {
   const key = S.settings.deepseekKey;
