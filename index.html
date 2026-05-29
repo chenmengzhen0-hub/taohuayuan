@@ -1399,10 +1399,11 @@ async function genSelfie(conv,prompt){
     let r,imgUrl='';
     const ref=S.settings.selfieRef;
     const useRef=ref && S.settings.selfieUseRef!==false;
-    // 判断是否走代理（地址含 /api/img-proxy）：走代理时路径用 ?path= 传递
-    const isProxy=/\/api\/img-proxy/.test(api);
-    const genUrl=isProxy?(api.split('?')[0]+'?path=/v1/images/generations'):api;
-    const editsUrl=isProxy?(api.split('?')[0]+'?path=/v1/images/edits'):api.replace(/\/generations.*$/,'/edits');
+    // 判断是否走代理（地址含 /api/img）：走代理时把上游路径拼到URL路径里
+    const isProxy=/\/api\/img(\/|$)/.test(api);
+    const proxyBase=api.replace(/\/+$/,'').split('?')[0];
+    const genUrl=isProxy?(proxyBase+'/v1/images/generations'):api;
+    const editsUrl=isProxy?(proxyBase+'/v1/images/edits'):api.replace(/\/generations.*$/,'/edits');
     // 150秒超时，避免请求被拦时无限转圈
     const ctl=new AbortController();
     const to=setTimeout(()=>ctl.abort(),150000);
