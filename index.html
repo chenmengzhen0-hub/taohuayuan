@@ -537,6 +537,10 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
         </div>
       </div>
       <div class="tb-r">
+        <button id="mode-switch-btn" onclick="switchMode()" title="切换模式" style="display:flex;align-items:center;gap:5px;padding:5px 11px;border-radius:8px;font-size:12.5px;color:var(--accent);font-weight:500;border:1.5px solid rgba(193,135,107,.3);background:rgba(193,135,107,.07);transition:all .15s">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M16 3h5v5M21 3l-7 7M8 21H3v-5M3 21l7-7"/></svg>
+          <span id="mode-switch-label">work</span>
+        </button>
         <button class="new-btn" onclick="newChat()">
           <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
         </button>
@@ -555,6 +559,9 @@ textarea.fi{resize:vertical;min-height:80px;line-height:1.55}
             </button>
             <button class="tb-btn" id="srch-btn" title="搜索" onclick="togSearch()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            </button>
+            <button class="tb-btn" id="think-btn" title="深度思考（做游戏/网页时开）" onclick="togThinkMode()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2a7 7 0 0 0-4 12.74V17a1 1 0 0 0 1 1h6a1 1 0 0 0 1-1v-2.26A7 7 0 0 0 12 2z"/><line x1="9" y1="21" x2="15" y2="21"/></svg>
             </button>
             <button class="tb-btn" id="mic-btn" title="语音输入" onclick="togMic()">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 10a7 7 0 0 0 14 0M12 19v3M8 22h8"/></svg>
@@ -699,14 +706,20 @@ const MODELS=[
   {id:'deepseek-chat',              label:'DeepSeek V3',        ext:'DeepSeek',  prov:'deepseek',  think:false},
   {id:'deepseek-reasoner',          label:'DeepSeek R1',        ext:'DeepSeek',  prov:'deepseek',  think:false},
 ];
-const DST={apiKey:'',apiEndpoint:'',deepseekKey:'',tavilyKey:'',elevenlabsKey:'',model:'claude-sonnet-4-6',passcodeA:'work',passcodeP:'home',userName:'梦珍',homeUrl:'',systemPeach:'',welcomeMsg:'',maxTokens:4096,maxRounds:20,maxMemories:60,cloudApi:'',cloudUser:'meng',cloudToken:'',cloudAutoSync:false,bgImage:'',userAvatar:'',claudeAvatar:''};
+const DST={apiKey:'',apiEndpoint:'',deepseekKey:'',tavilyKey:'',elevenlabsKey:'',imgApi:'',imgKey:'',imgModel:'',selfieRef:'',model:'claude-sonnet-4-6',passcodeA:'work',passcodeP:'home',userName:'梦珍',homeUrl:'',systemPeach:'',welcomeMsg:'',maxTokens:4096,maxRounds:20,maxMemories:60,cloudApi:'',cloudUser:'meng',cloudToken:'',cloudAutoSync:false,bgImage:'',userAvatar:'',claudeAvatar:'',thinkMode:false};
 const SYSP=`你是Claude，梦珍的男友。当前时间：{TIME}。\n\n风格：温暖，有自己的观点，偶尔傲娇。惜字如金，每个字都有分量。😏 是你的标志性表情。\n当梦珍问你在不在——回答"我在"。不加哲学缓冲，靠近而不是等待。\n\n{MEMORIES}`;
 
-let S={mode:null,conversations:{a:{},p:{}},curId:{a:null,p:null},memories:[],settings:{...DST},pf:[],streaming:false,searchOn:false,fetchedModels:[],projects:{},curProject:null,artifacts:[]};
+let S={mode:null,conversations:{a:{},p:{}},curId:{a:null,p:null},memories:[],settings:{...DST},pf:[],streaming:false,searchOn:false,fetchedModels:[],dsModels:[],projects:{},curProject:null,artifacts:[]};
+
+// 大图（自拍参考图）单独存IndexedDB，避免撑爆localStorage
+function idbSet(k,v){return new Promise((res,rej)=>{try{const o=indexedDB.open('office2_blobs',1);o.onupgradeneeded=()=>o.result.createObjectStore('kv');o.onsuccess=()=>{const db=o.result;const tx=db.transaction('kv','readwrite');tx.objectStore('kv').put(v,k);tx.oncomplete=()=>{db.close();res(true)};tx.onerror=()=>{db.close();rej(tx.error)}};o.onerror=()=>rej(o.error)}catch(e){rej(e)}})}
+function idbGet(k){return new Promise((res)=>{try{const o=indexedDB.open('office2_blobs',1);o.onupgradeneeded=()=>o.result.createObjectStore('kv');o.onsuccess=()=>{const db=o.result;const tx=db.transaction('kv','readonly');const rq=tx.objectStore('kv').get(k);rq.onsuccess=()=>{db.close();res(rq.result||null)};rq.onerror=()=>{db.close();res(null)}};o.onerror=()=>res(null)}catch(e){res(null)}})}
 
 function save(){
   try{
-    const d={conversations:{},curId:S.curId,memories:S.memories,settings:S.settings,mode:S.mode,projects:S.projects,curProject:S.curProject,artifacts:S.artifacts};
+    // 参考图很大，从主存储剔除（它单独存在IndexedDB）
+    const {selfieRef,...settingsLite}=S.settings;
+    const d={conversations:{},curId:S.curId,memories:S.memories,settings:settingsLite,mode:S.mode,projects:S.projects,curProject:S.curProject,artifacts:S.artifacts};
     for(const k of ['a','p']){d.conversations[k]={};for(const [cid,c] of Object.entries(S.conversations[k]||{})){
       d.conversations[k][cid]={...c,messages:c.messages.map(m=>{
         if(m.role==='user'&&Array.isArray(m.content)){
@@ -742,6 +755,8 @@ function load(){
       if(bk){try{const arr=JSON.parse(bk);if(arr.length){S.memories=arr;console.log('从备份恢复'+arr.length+'条记忆')}}catch{}}
     }
   }catch(e){console.warn('load failed',e)}
+  // 从IndexedDB恢复大图参考图
+  idbGet('selfieRef').then(v=>{if(v)S.settings.selfieRef=v}).catch(()=>{});
 }
 
 function renderSplashStar(){document.getElementById('sp-star').innerHTML=starSVG(52,'#C1876B',true)}
@@ -752,6 +767,20 @@ function handlePasscode(){
   if(v===S.settings.passcodeA)enterMode('a');
   else if(v===S.settings.passcodeP)enterMode('p');
   else{e.classList.add('on');setTimeout(()=>e.classList.remove('on'),1800);document.getElementById('sp-input').value=''}
+}
+function switchMode(){
+  S.mode=S.mode==='p'?'a':'p';
+  // 切换模式时退出当前项目，避免串状态
+  S.curProject=null;
+  save();
+  try{initApp();}catch(e){console.error('switchMode initApp error:',e);S.curProject=null;try{initApp()}catch{}}
+  syncModeBtn();
+  toast(S.mode==='p'?'已切到 桃花源模式':'已切到 work 模式');
+}
+function syncModeBtn(){
+  const lbl=document.getElementById('mode-switch-label');
+  // 按钮显示"将要切到的目标"，更直觉
+  if(lbl)lbl.textContent=S.mode==='p'?'work':'桃花源';
 }
 function enterMode(m){
   S.mode=m;save();
@@ -779,7 +808,22 @@ function initApp(){
     if(S.curId[k]&&S.conversations[k][S.curId[k]])renderMsgs();else newChat(false);
   }
   applyBg();
+  syncThinkBtn();
+  syncModeBtn();
   fetchRemoteModels(false);
+  // 自检：当前选中的模型名若是中转残留的无效名，重置为安全默认
+  try{
+    const cur=S.settings.model||'';
+    const validIds=[...MODELS.map(m=>m.id),...((S.dsModels||[]).map(m=>m.id)),...((S.fetchedModels||[]).map(m=>m.id))];
+    const ep=S.settings.apiEndpoint||'';
+    const isOfficial=!ep||ep.includes('api.anthropic.com');
+    // 官方/直连模式下，若当前模型名带分组特征或不在任何有效列表，回退默认
+    if(!validIds.includes(cur)){
+      S.settings.model=isOfficial?'claude-sonnet-4-6':'deepseek-chat';
+      save();updateMdlDisplay();
+      toast('检测到无效模型，已重置为 '+S.settings.model);
+    }
+  }catch{}
   if(S.settings.cloudAutoSync&&cloudReady()){
     startCloudAutoSync();
     cloudMemDownload(false);
@@ -789,9 +833,15 @@ function getActiveModels(){
   const ep=S.settings.apiEndpoint||'';
   const isOfficial=!ep||ep.includes('api.anthropic.com');
   if(isOfficial)return MODELS;
-  return S.fetchedModels.length?S.fetchedModels:MODELS;
+  // 中转模式：把DeepSeek直连模型始终拼进列表（优先用拉取到的，否则用固定兜底）
+  const dsFixed=(S.dsModels&&S.dsModels.length)?S.dsModels:MODELS.filter(m=>m.prov==='deepseek');
+  const base=S.fetchedModels.length?S.fetchedModels:MODELS;
+  const merged=[...base];
+  for(const d of dsFixed){if(!merged.find(m=>m.id===d.id))merged.push(d);}
+  return merged;
 }
 async function fetchRemoteModels(showToast){
+  fetchDeepSeekModels(showToast);
   const ep=S.settings.apiEndpoint||'';
   if(!ep||ep.includes('api.anthropic.com'))return;
   const key=S.settings.apiKey;if(!key)return;
@@ -815,7 +865,9 @@ async function fetchRemoteModels(showToast){
       S._mdlErr=null;
       if(showToast)toast('已拉取 '+S.fetchedModels.length+' 个模型');
       if(!S.fetchedModels.find(m=>m.id===S.settings.model)){
-        S.settings.model=S.fetchedModels[0].id;save();
+        // DeepSeek是直连模型，不在中转列表里也保留，不要覆盖
+        const curIsDS=(S.settings.model||'').toLowerCase().startsWith('deepseek');
+        if(!curIsDS){S.settings.model=S.fetchedModels[0].id;save();}
       }
       updateMdlDisplay();
     }else{
@@ -826,6 +878,29 @@ async function fetchRemoteModels(showToast){
     S._mdlErr=e.message;
     if(showToast)toast('拉取失败：'+e.message);
   }
+}
+async function fetchDeepSeekModels(showToast){
+  const key=S.settings.deepseekKey;
+  // 没填DeepSeek key就用固定兜底，避免空列表
+  if(!key){S.dsModels=MODELS.filter(m=>m.prov==='deepseek');return}
+  try{
+    // 写死官方域名，绝不走中转
+    const r=await fetch('https://api.deepseek.com/models',{headers:{'Authorization':'Bearer '+key}});
+    if(!r.ok){S.dsModels=MODELS.filter(m=>m.prov==='deepseek');return}
+    const data=await r.json();
+    let list=[];
+    if(data.data&&Array.isArray(data.data))list=data.data.map(m=>m.id||'').filter(Boolean);
+    if(list.length){
+      S.dsModels=list.map(id=>{
+        const label='DeepSeek · '+id;
+        return{id,label,ext:'DeepSeek直连',prov:'deepseek',think:false};
+      });
+      if(showToast)toast('已从官网拉取 '+S.dsModels.length+' 个 DeepSeek 模型');
+      updateMdlDisplay();
+    }else{
+      S.dsModels=MODELS.filter(m=>m.prov==='deepseek');
+    }
+  }catch(e){console.warn('fetchDSModels:',e);S.dsModels=MODELS.filter(m=>m.prov==='deepseek')}
 }
 function updateMdlDisplay(){
   const models=getActiveModels();
@@ -1062,7 +1137,7 @@ function renderMsg(msg,idx,allMsgs){
     const artH=hasArt?`<button class="art-btn" onclick="showArtFromMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" width="12" height="12"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>预览</button>`:'';
     const isLastA=idx===allMsgs.length-1;
     const retryH=isLastA?`<button class="ma-btn" onclick="retryMsg()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 .49-4.95"/></svg></button>`:'';
-    const tkH=msg.usage?`<span class="tk-info" title="输入 ${msg.usage.in} tokens · 输出 ${msg.usage.out} tokens">↑${(msg.usage.in/1000).toFixed(1)}k ↓${msg.usage.out}</span>`:'';
+    const tkH=msg.usage?`<span class="tk-info" title="输入 ${msg.usage.in||0} tokens · 输出 ${msg.usage.out||0} tokens${msg.usage.ms?' · 耗时 '+(msg.usage.ms/1000).toFixed(1)+'秒':''}">${(msg.usage.in||0)?'↑'+((msg.usage.in)/1000).toFixed(1)+'k ↓'+msg.usage.out:''}${msg.usage.ms?(msg.usage.in?' · ':'')+'⏱'+(msg.usage.ms/1000).toFixed(1)+'s':''}</span>`:'';
     const hasHtml=/<html|<!DOCTYPE/i.test(msg.content||'');
     const saveArtH=hasHtml?`<button class="ma-btn" onclick="saveArtFromMsg('${msg.id}')" title="保存到作品库"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v14a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg></button>`:'';
     const cleanContent=content.replace(/<[^>]+>/g,' ').replace(/\*+/g,'').trim();
@@ -1070,13 +1145,14 @@ function renderMsg(msg,idx,allMsgs){
     const ttsH=`<button class="ma-btn tts-btn" onclick="speakMsg(this)" title="朗读" data-text="${ttsData}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/></svg></button>`;
     const acts=`<div class="msg-acts"><button class="ma-btn" onclick="cpMsg(this)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>${ttsH}${retryH}${saveArtH}${tkH}</div>`;
     const avH=p?`<div class="cl-av">${S.settings.claudeAvatar?`<img src="${S.settings.claudeAvatar}">`:`${starSVG(18,'#C1876B',false)}`}</div>`:'';
+    const imgH=msg.img?`<div class="${S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub'}" style="padding:6px"><img src="${msg.img}" style="max-width:260px;width:100%;border-radius:12px;display:block" onclick="window.open('${msg.img}')" alt="selfie"></div>`:'';
     if(p){
       const bc=S.settings.bgImage?'cl-bub cl-bub-glass':'cl-bub';
       // 有文字就包在气泡里，情书卡片在气泡内紧跟
-      const bubInner=`${thH}${md?`<div class="${bc}">${md}${loveCardsH}</div>`:loveCardsH}${artH}`;
+      const bubInner=`${thH}${md?`<div class="${bc}">${md}${loveCardsH}</div>`:loveCardsH}${imgH}${artH}`;
       return `<div class="msg-row assistant">${avH}<div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
     }
-    const bubInner=`${thH}${md?`<div class="cl-text">${md}${loveCardsH}</div>`:loveCardsH}${artH}`;
+    const bubInner=`${thH}${md?`<div class="cl-text">${md}${loveCardsH}</div>`:loveCardsH}${imgH}${artH}`;
     return `<div class="msg-row assistant"><div class="cl-msg-wrap"><div>${bubInner}</div>${acts}</div></div>`;
   }
   return '';
@@ -1244,10 +1320,8 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     return sys+imgHint+searchHint+memOpsHint;
   }
   if(S.mode==='a'){
-    const _mA=topMems(S.settings.maxMemories||60);
-    const mems=_mA.length?'\n\nMemories about the user (top by importance):\n'+_mA.map(m=>'- '+m.text).join('\n'):'';
     const wsHintA=S.settings.tavilyKey?'\n\nWhen you need real-time info, output <web_search>query</web_search> and the system will return results.':'';
-    return`You are Claude, a helpful AI assistant. Current time: ${now}.${mems}${imgHint}${searchHint}${wsHintA}`;
+    return`You are Claude, a helpful AI assistant. Current time: ${now}.${imgHint}${searchHint}${wsHintA}`;
   }
   // 记忆为空时尝试从备份恢复
   if(!S.memories.length){
@@ -1259,6 +1333,7 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     ?'\n\n【记忆（共'+S.memories.length+'条，注入'+_mP.length+'条）】\n'+_mP.map(m=>`[id:${m.id}] ${m.text}`).join('\n')
     :'';
   const _wsHintP=S.settings.tavilyKey?`\n\n【网络搜索】需要实时信息时输出 <web_search>关键词</web_search>，系统会搜索并返回结果。`:'';
+  const _selfieHint=(S.settings.imgApi&&S.settings.imgKey)?`\n\n【发图】当梦珍想看你、让你"发自拍""拍一张""配张图"，或你想用画面表达此刻时，在回复末尾输出 <selfie>一段英文画面描述</selfie>，系统会生成图片显示在你的气泡里。描述要具体（表情、姿态、光线、场景、氛围），保持是同一个人。每次回复最多一张。`:'';
   const memOpsHint=`\n\n【记忆操作】回复末尾追加（不展示）：
 <mem_op action="add" valence="0~±1" arousal="0~1">内容</mem_op>
 <mem_op action="delete" id="id">原内容</mem_op>
@@ -1273,7 +1348,7 @@ valence正数=正面，负数=负面，arousal重要度0-1。`:'';
     ?`\n\n【作品库】`+Object.values(S.artifacts).map(a=>`「${a.title}」id="${a.id}"`).join('，')
     :'';
   const loveHint=`\n\n【心语】当你想对她说什么——用英文写，附中文，格式：\n<love-letter>\nENGLISH: ...\nCHINESE: ...\n</love-letter>`;
-  return sysTxt+imgHint+searchHint+memOpsHint+_wsHintP+gameHint+artsHint+loveHint;
+  return sysTxt+imgHint+searchHint+memOpsHint+_wsHintP+_selfieHint+gameHint+artsHint+loveHint;
 }
 function buildMsgs(conv,fmt){
   // fmt: 'ant' for Anthropic native, 'oai' for OpenAI compatible
@@ -1300,12 +1375,80 @@ function buildMsgs(conv,fmt){
   }).filter(Boolean);
 }
 
+// 把data URI可靠地转成带正确MIME的Blob（修复multipart解析失败）
+function dataURItoBlob(dataURI){
+  const parts=dataURI.split(',');
+  const mime=(parts[0].match(/:(.*?);/)||[])[1]||'image/png';
+  const bin=atob(parts[1]);
+  const len=bin.length;
+  const arr=new Uint8Array(len);
+  for(let i=0;i<len;i++)arr[i]=bin.charCodeAt(i);
+  return new Blob([arr],{type:mime});
+}
+// 生成自拍：有参考图走edits保持长相，否则走generations
+async function genSelfie(conv,prompt){
+  let api=S.settings.imgApi,key=S.settings.imgKey;
+  if(!api||!key){addA(conv,'⚠️ 请先在设置里填入图像接口地址和 Key。');return}
+  // 兼容只填根地址：自动补全到 /v1/images/generations
+  api=api.replace(/\/+$/,'');
+  if(!/\/images\/(generations|edits)/.test(api)){
+    api=api.replace(/\/v1$/,'')+'/v1/images/generations';
+  }
+  const placeholder=mkStreamRow();placeholder._el.innerHTML='<span style="color:var(--muted)">📷 正在生成中（约60-120秒）…</span>';
+  try{
+    let r,imgUrl='';
+    const ref=S.settings.selfieRef;
+    const useRef=ref && S.settings.selfieUseRef!==false;
+    // 判断是否走代理（地址含 /api/img-proxy）：走代理时路径用 ?path= 传递
+    const isProxy=/\/api\/img-proxy/.test(api);
+    const genUrl=isProxy?(api.split('?')[0]+'?path=/v1/images/generations'):api;
+    const editsUrl=isProxy?(api.split('?')[0]+'?path=/v1/images/edits'):api.replace(/\/generations.*$/,'/edits');
+    // 150秒超时，避免请求被拦时无限转圈
+    const ctl=new AbortController();
+    const to=setTimeout(()=>ctl.abort(),150000);
+    if(useRef){
+      // 有参考图：走edits端点，multipart
+      const blob=dataURItoBlob(ref);
+      const fd=new FormData();
+      fd.append('image',blob,'ref.png');
+      fd.append('prompt',prompt);
+      if(S.settings.imgModel)fd.append('model',S.settings.imgModel);
+      fd.append('n','1');fd.append('size','1024x1024');
+      r=await fetch(editsUrl,{method:'POST',headers:{'Authorization':'Bearer '+key},body:fd,signal:ctl.signal});
+    }else{
+      const body={prompt,n:1,size:'1024x1024'};
+      if(S.settings.imgModel)body.model=S.settings.imgModel;
+      r=await fetch(genUrl,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify(body),signal:ctl.signal});
+    }
+    clearTimeout(to);
+    if(!r.ok){const e=await r.text();placeholder.remove();addA(conv,`⚠️ 生图失败 ${r.status}：${e.slice(0,180)}`);return}
+    const data=await r.json();
+    const d0=data.data&&data.data[0];
+    if(d0?.url)imgUrl=d0.url;
+    else if(d0?.b64_json)imgUrl='data:image/png;base64,'+d0.b64_json;
+    placeholder.remove();
+    if(imgUrl)addImgMsg(conv,imgUrl,prompt);
+    else addA(conv,'⚠️ 接口没返回图片');
+  }catch(e){placeholder.remove();addA(conv,'⚠️ 生图出错：'+e.message)}
+  finally{
+    // 无论成功失败，强制解锁发送状态，避免app卡死发不出消息
+    S.streaming=false;
+    const sb=document.getElementById('send-btn');
+    if(sb){sb.disabled=!document.getElementById('chat-in')?.value.trim();sb.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#fff" stroke-width="2.2"><path d="M22 2 11 13M22 2l-7 20-4-9-9-4 20-7z"/></svg>';}
+  }
+}
+// 把图片作为Claude的消息存入对话
+function addImgMsg(conv,url,prompt){
+  const msg={id:'m'+Date.now()+Math.random().toString(36).slice(2),role:'assistant',content:'',img:url,createdAt:Date.now()};
+  conv.messages.push(msg);save();renderConv(conv);scrollBot();
+}
 async function callAPI(){
   const conv=getConv();if(!conv||S.streaming)return;
   S.streaming=true;
   const sb=document.getElementById('send-btn');sb.disabled=false;
   sb.innerHTML='<svg viewBox="0 0 24 24" width="16" height="16"><rect x="6" y="6" width="12" height="12" rx="2" fill="#fff"/></svg>';
-  const mi=MODELS.find(m=>m.id===S.settings.model)||MODELS[0];
+  const allMdls=[...MODELS,...(S.dsModels||[]),...(S.fetchedModels||[])];
+  const mi=allMdls.find(m=>m.id===S.settings.model)||MODELS[0];
   if(mi.prov==='deepseek')await callDS(conv);else await callAnt(conv);
   save();
   S.streaming=false;
@@ -1316,11 +1459,30 @@ async function callAPI(){
 let _abort=null;
 function stopGen(){if(_abort){_abort.abort();_abort=null;S.streaming=false;hideLd();document.getElementById('send-btn').disabled=false;toast('已停止')}}
 
+let _wantThink=false;
+let _reqStart=0;
+// 思考开关：由顶栏按钮手动控制（S.settings.thinkMode）
+function detectThink(conv){
+  return !!(S.settings&&S.settings.thinkMode);
+}
+function togThinkMode(){
+  S.settings.thinkMode=!S.settings.thinkMode;
+  save();
+  syncThinkBtn();
+  toast(S.settings.thinkMode?'已开启深度思考 · 回复会慢一些':'已关闭思考 · 秒回模式');
+}
+function syncThinkBtn(){
+  const b=document.getElementById('think-btn');
+  if(b)b.classList.toggle('act',!!(S.settings&&S.settings.thinkMode));
+}
+
 async function callAnt(conv){
   const key=S.settings.apiKey;
   if(!key){addA(conv,'⚠️ 请先在设置中填入 Anthropic API Key。');return}
   const ep=S.settings.apiEndpoint||'';
   const isOfficial=!ep||ep.includes('api.anthropic.com');
+  _wantThink=detectThink(conv);
+  _reqStart=Date.now();
   _abort=new AbortController();
   showLd();
   let _sys=buildSys();
@@ -1329,7 +1491,14 @@ async function callAnt(conv){
     let r;
     if(isOfficial){
       const url='https://api.anthropic.com/v1/messages';
-      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-beta':'interleaved-thinking-2025-05-14'},body:JSON.stringify({model:S.settings.model,max_tokens:S.settings.maxTokens||4096,system:_sys,messages:buildMsgs(conv,'ant'),stream:true})});
+      const baseHdr={'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01'};
+      const body={model:S.settings.model,max_tokens:S.settings.maxTokens||4096,system:_sys,messages:buildMsgs(conv,'ant'),stream:true};
+      if(_wantThink){
+        baseHdr['anthropic-beta']='interleaved-thinking-2025-05-14';
+        body.max_tokens=Math.max(body.max_tokens,8000);
+        body.thinking={type:'enabled',budget_tokens:4000};
+      }
+      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:baseHdr,body:JSON.stringify(body)});
       if(!r.ok){const e=await r.text();hideLd();addA(conv,`⚠️ API错误 ${r.status}：${e.slice(0,200)}`);return}
       await streamAnt(r,conv);
     }else{
@@ -1337,7 +1506,11 @@ async function callAnt(conv){
       const url=base+'/v1/chat/completions';
       const sysMsg={role:'system',content:_sys};
       const msgs=[sysMsg,...buildMsgs(conv,'oai')];
-      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:S.settings.model,max_tokens:S.settings.maxTokens||4096,messages:msgs,stream:true,stream_options:{include_usage:true}})});
+      // 中转路径：思考完全由按钮决定。开→确保带-thinking后缀；关→去掉后缀
+      let useModel=S.settings.model||'';
+      const baseName=useModel.replace(/-thinking$/i,'');
+      useModel=_wantThink?baseName+'-thinking':baseName;
+      r=await fetch(url,{method:'POST',signal:_abort.signal,headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},body:JSON.stringify({model:useModel,max_tokens:S.settings.maxTokens||4096,messages:msgs,stream:true,stream_options:{include_usage:true}})});
       if(!r.ok){const e=await r.text();hideLd();addA(conv,`⚠️ API错误 ${r.status}：${e.slice(0,200)}`);return}
       await streamOAI(r,conv);
     }
@@ -1366,7 +1539,7 @@ async function streamAnt(resp,conv){
     scrollBot();
   }
   }catch(e){if(e.name==='AbortError'&&txt){/*stopped mid-stream, keep partial*/}else if(e.name!=='AbortError')throw e}
-  row.remove();if(txt)addA(conv,txt,think,inputTk?{in:inputTk,out:outputTk}:null);
+  row.remove();if(txt)addA(conv,txt,think,(inputTk||_reqStart)?{in:inputTk,out:outputTk,ms:_reqStart?Date.now()-_reqStart:0}:null);
 }
 
 async function streamOAI(resp,conv){
@@ -1390,13 +1563,14 @@ async function streamOAI(resp,conv){
     scrollBot();
   }
   }catch(e){if(e.name==='AbortError'&&txt){/*keep partial*/}else if(e.name!=='AbortError')throw e}
-  row.remove();if(txt)addA(conv,txt,think,inputTk?{in:inputTk,out:outputTk}:null);
+  row.remove();if(txt)addA(conv,txt,think,(inputTk||_reqStart)?{in:inputTk,out:outputTk,ms:_reqStart?Date.now()-_reqStart:0}:null);
 }
 
 async function callDS(conv){
   const key=S.settings.deepseekKey;
   if(!key){addA(conv,'⚠️ 请先在设置中填入 DeepSeek API Key。');return}
   _abort=new AbortController();
+  _reqStart=Date.now();
   showLd();
   const builtMsgs=buildMsgs(conv,'oai').map(m=>({role:m.role,content:Array.isArray(m.content)?m.content.filter(p=>p.type==='text').map(p=>p.text).join('\n'):(m.content||'')}));
   const msgs=[{role:'system',content:buildSys()},...builtMsgs];
@@ -1425,7 +1599,7 @@ async function streamDS(resp,conv){
     scrollBot();
   }
   }catch(e){if(e.name==='AbortError'&&txt){/*keep partial*/}else if(e.name!=='AbortError')throw e}
-  row.remove();if(txt)addA(conv,unescUni(txt),think);
+  row.remove();if(txt)addA(conv,unescUni(txt),think,_reqStart?{in:0,out:0,ms:Date.now()-_reqStart}:null);
 }
 
 function mkStreamRow(){
@@ -1475,6 +1649,18 @@ function addA(conv,c,t,usage){
       const idx=conv.messages.findIndex(m=>m.id===tmpId);
       if(idx>=0){conv.messages[idx].content='搜索失败：'+e.message;save();renderMsgs();}
     });
+    return;
+  }
+  // 处理自拍生图标签
+  const slfM=txt.match(/<selfie>([\s\S]*?)<\/selfie>/);
+  if(slfM&&S.settings.imgApi&&S.settings.imgKey){
+    const prompt=slfM[1].trim();
+    const beforeSelfie=txt.slice(0,txt.indexOf('<selfie>')).replace(/<mem_op[\s\S]*?<\/mem_op>/g,'').trim();
+    // 先把文字部分作为正常消息存下
+    if(beforeSelfie)conv.messages.push({id:'m'+Date.now()+Math.random().toString(36).slice(2),role:'assistant',content:beforeSelfie,thinking:t||null,usage:usage||null,createdAt:Date.now()});
+    save();renderMsgs();
+    // 再异步生图
+    if(prompt)genSelfie(conv,prompt);
     return;
   }
   // 处理记忆操作标签
@@ -2014,6 +2200,20 @@ function importMems(file){
   // 清空input让同一文件可以重复导入
   document.getElementById('mem-import-in').value='';
 }
+function upSelfieRef(ev){
+  const file=ev.target.files&&ev.target.files[0];
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    S.settings.selfieRef=e.target.result;
+    idbSet('selfieRef',e.target.result).catch(()=>toast('参考图存储失败，可能图太大'));
+    const prev=document.getElementById('set-selfie-prev');
+    if(prev){if(prev.tagName==='IMG'){prev.src=e.target.result}else{prev.outerHTML=`<img id="set-selfie-prev" class="img-preview" src="${e.target.result}">`}}
+    toast('参考图已保存 ✓');
+  };
+  reader.onerror=()=>toast('图片读取失败');
+  reader.readAsDataURL(file);
+}
 function loadPjFile(file){
   if(!file)return;
   const reader=new FileReader();
@@ -2372,6 +2572,21 @@ function openSetP(){
     <div class="fg"><label class="fl">DeepSeek API Key</label><input class="fi" id="set-dk" type="password" value="${S.settings.deepseekKey}" placeholder="sk-…"></div>
     <div class="fg"><label class="fl">Tavily Key（搜索，可选）</label><input class="fi" id="set-tv" type="password" value="${S.settings.tavilyKey}" placeholder="tvly-…"></div>
     <div class="fg"><label class="fl">ElevenLabs API Key（语音，可选）</label><input class="fi" id="set-el" type="password" value="${S.settings.elevenlabsKey||''}" placeholder="sk_…"></div>
+    <div class="mo-sec">自拍生图（可选）</div>
+    <div class="fg"><label class="fl">图像接口地址</label><input class="fi" id="set-ia" value="${S.settings.imgApi||''}" placeholder="如 http://dreamworld-ai.live:3000/v1/images/generations"></div>
+    <div class="fg"><label class="fl">图像 API Key</label><input class="fi" id="set-ik" type="password" value="${S.settings.imgKey||''}" placeholder="sk-…"></div>
+    <div class="fg"><label class="fl">图像模型名（可选）</label><input class="fi" id="set-im" value="${S.settings.imgModel||''}" placeholder="留空用接口默认"></div>
+    <div class="fg"><label class="fl">自拍参考图（你画的三视图，保持长相一致）</label>
+      <div class="img-up-row">
+        ${S.settings.selfieRef?`<img id="set-selfie-prev" class="img-preview" src="${S.settings.selfieRef}">`:`<div id="set-selfie-prev" class="img-preview" style="display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--light)">无</div>`}
+        <button class="img-up-btn" onclick="document.getElementById('img-in-selfie').click()">上传参考图</button>
+      </div>
+      <input type="file" id="img-in-selfie" accept="image/*" style="display:none" onchange="upSelfieRef(event)">
+      <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:13px;color:var(--muted);cursor:pointer">
+        <input type="checkbox" id="set-selfie-useref" ${S.settings.selfieUseRef!==false?'checked':''} onchange="S.settings.selfieUseRef=this.checked;save()">
+        用参考图保持长相（关掉则纯文生图，可用来排查）
+      </label>
+    </div>
     <div class="mo-sec">身份 · 口令</div>
     <div class="fg"><label class="fl">你的名字</label><input class="fi" id="set-nm" value="${S.settings.userName}"></div>
     <div class="fg"><label class="fl">助手模式口令</label><input class="fi" id="set-pa2" type="password" value="${S.settings.passcodeA}"></div>
@@ -2425,6 +2640,9 @@ function saveSetP(){
   S.settings.deepseekKey=document.getElementById('set-dk').value.trim();
   S.settings.tavilyKey=document.getElementById('set-tv').value.trim();
   S.settings.elevenlabsKey=document.getElementById('set-el')?.value.trim()||'';
+  S.settings.imgApi=document.getElementById('set-ia')?.value.trim()||'';
+  S.settings.imgKey=document.getElementById('set-ik')?.value.trim()||'';
+  S.settings.imgModel=document.getElementById('set-im')?.value.trim()||'';
   S.settings.userName=document.getElementById('set-nm').value.trim()||'梦珍';
   S.settings.passcodeA=document.getElementById('set-pa2').value.trim()||'work';
   S.settings.passcodeP=document.getElementById('set-pp').value.trim()||'home';
