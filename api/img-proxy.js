@@ -10,31 +10,48 @@ module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
-  if (req.method === 'OPTIONS') { res.status(200).end(); return; }
-  if (req.method !== 'POST') { res.status(405).json({ error: 'Only POST' }); return; }
+  
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+  
+  if (req.method !== 'POST') {
+    res.status(405).json({ error: 'Only POST' });
+    return;
+  }
 
   try {
-    const incoming = req.body || {};
-    const upstreamPath = incoming.__path || '/v1/images/generations';
-    const payload = { ...incoming };
-    delete payload.__path;
-
+    const body = req.body || {};
+    let upstreamPath = body.__path || '/v1/images/generations';
+    
+    // 删除 __path 字段，避免传给上游
+    delete body.__path;
+    
     const target = UPSTREAM + upstreamPath;
+    console.log(`[Proxy] ${req.method} -> ${target}`);
+    
+    const headers = {
+      'Content-Type': 'application/json',
+    };
+    if (req.headers.authorization) {
+      headers['Authorization'] = req.headers.authorization;
+    }
+    
     const upstreamResp = await fetch(target, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': req.headers['authorization'] || '',
-      },
-      body: JSON.stringify(payload),
+      headers: headers,
+      body: JSON.stringify(body),
     });
-
-    const text = await upstreamResp.text();
+    
+    const data = await upstreamResp.text();
     res.status(upstreamResp.status);
     res.setHeader('Content-Type', upstreamResp.headers.get('content-type') || 'application/json');
-    res.send(text);
+    res.send(data);
+    
   } catch (e) {
-    res.status(502).json({ error: { message: 'proxy failed: ' + e.message } });
+    console.error('[Proxy Error]', e);
+    res.status(502).json({ error: { message: 'Proxy failed: ' + e.message } });
   }
 };
 
