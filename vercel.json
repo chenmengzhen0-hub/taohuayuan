@@ -10,5 +10,10 @@
         { "key": "Service-Worker-Allowed", "value": "/" }
       ]
     }
-  ]
+  ],
+  "functions": {
+    "api/img-proxy.js": {
+      "maxDuration": 300
+    }
+  }
 }
